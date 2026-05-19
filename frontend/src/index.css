@@ -1,0 +1,31 @@
+@import "tailwindcss";
+
+@theme {
+  --font-patrick: "Patrick Hand", cursive;
+  --font-fredoka: "Fredoka", sans-serif;
+}
+
+html {
+  font-size: 90%;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c084fc; /* purple-400 */
+  border-radius: 10px;
+  border: 3px solid #fefce8; /* Match background for padding effect */
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a855f7; /* purple-500 */
+}

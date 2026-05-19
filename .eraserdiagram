@@ -1,0 +1,100 @@
+flowchart-diagram
+
+// Entry Point
+HomePage [shape: oval, icon: home, color: purple]
+// Player Setup
+Enter Name [shape: parallelogram, icon: edit]
+Choose Avatar [shape: parallelogram, icon: user]
+
+// Room Actions
+Room Action? [shape: diamond, icon: help-circle]
+
+Create Room Path [color: green] {
+    Create Room [icon: plus-circle, color: green]
+    Room Created [icon: check-circle]
+    Get Room Code [shape: parallelogram, icon: hash]
+}
+
+Join Room Path [color: blue] {
+    Join Room [icon: log-in, color: blue]
+    Enter Room Code [shape: parallelogram, icon: key]
+    Room Exists? [shape: diamond, icon: search]
+    Room Full? [shape: diamond, icon: users]
+    Error [shape: oval, icon: alert-triangle, color: red]
+}
+
+// Lobby
+Lobby [icon: layout, color: orange] {
+    Waiting Room [icon: clock]
+    Host Settings [icon: settings]
+    Player List [icon: users]
+    Is Game Playing? [shape: diamond, icon: play]
+}
+
+// Game Loop
+Game Screen [icon: monitor, color: green] {
+    Pick Drawer [icon: pen-tool]
+    Select Word [icon: book]
+    Send Word to Drawer [icon: eye]
+    Send Hint to Guessers [icon: eye-off]
+    Start Timer [icon: clock]
+}
+
+Turn Loop [color: blue] {
+    Drawing Phase [icon: pen-tool, color: blue]
+    Player Guesses [icon: message-circle]
+    Correct? [shape: diamond, icon: check]
+    Award Points [icon: award]
+    Timer Done? [shape: diamond, icon: clock]
+    Time Up [icon: alert-circle]
+}
+
+Round Check [color: orange] {
+    Next Drawer? [shape: diamond, icon: skip-forward]
+    Next Round? [shape: diamond, icon: repeat]
+}
+
+Game Over [shape: oval, icon: trophy, color: red]
+Show Scoreboard [shape: oval, icon: bar-chart-2]
+
+// Flow: Entry
+HomePage > Enter Name > Choose Avatar > Room Action?
+
+// Flow: Create Room
+Room Action? > Create Room: Create
+Create Room > Room Created > Get Room Code > Waiting Room
+
+// Flow: Join Room
+Room Action? > Join Room: Join
+Join Room > Enter Room Code > Room Exists?
+Room Exists? > Error: No
+Room Exists? > Room Full?: Yes
+Room Full? > Error: Yes
+Room Full? > Is Game Playing?: No
+
+// Flow: Lobby to Game
+Is Game Playing? > Game Screen: Yes (Skip Lobby)
+Is Game Playing? > Waiting Room: No
+Waiting Room > Host Settings
+Host Settings > Player List
+Player List > Game Screen: Host Starts
+
+// Flow: Game Turn
+Game Screen > Pick Drawer > Select Word
+Select Word > Send Word to Drawer
+Select Word > Send Hint to Guessers
+Send Hint to Guessers > Start Timer > Drawing Phase
+
+// Flow: Guessing
+Drawing Phase > Player Guesses > Correct?
+Correct? > Award Points: Yes
+Correct? > Player Guesses: No (Show in Chat)
+Award Points > Next Drawer?
+Timer Done? > Time Up > Next Drawer?
+
+// Flow: Round Management
+Next Drawer? > Pick Drawer: Yes (More Players)
+Next Drawer? > Next Round?: No (All Drew)
+Next Round? > Pick Drawer: Yes (Rounds Left)
+Next Round? > Game Over: No (All Done)
+Game Over > Show Scoreboard
