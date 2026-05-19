@@ -3,6 +3,113 @@ import { useSocket } from '../context/SocketContext';
 import { PlayerContext } from '../context/PlayerContext';
 import ShapeOverlay from './ShapeOverlay';
 
+const hexToRgba = (hex) => {
+    let c;
+    if(/^#([A-Fa-f0-9]{3}){1,2}$/.test(hex)){
+        c= hex.substring(1).split('');
+        if(c.length== 3){
+            c= [c[0], c[0], c[1], c[1], c[2], c[2]];
+        }
+        c= '0x'+c.join('');
+        return [(c>>16)&255, (c>>8)&255, c&255, 255];
+    }
+    return [0,0,0,255];
+};
+
+const executeFloodFill = (ctx, startX, startY, fillColor) => {
+    const canvas = ctx.canvas;
+    const width = canvas.width;
+    const height = canvas.height;
+    startX = Math.floor(startX);
+    startY = Math.floor(startY);
+    if (startX < 0 || startX >= width || startY < 0 || startY >= height) return;
+
+    const colorData = ctx.getImageData(0, 0, width, height);
+    const data = colorData.data;
+
+    const startPos = (startY * width + startX) * 4;
+    const startR = data[startPos];
+    const startG = data[startPos+1];
+    const startB = data[startPos+2];
+    const startA = data[startPos+3];
+
+    const fillRgba = hexToRgba(fillColor);
+    const fillR = fillRgba[0];
+    const fillG = fillRgba[1];
+    const fillB = fillRgba[2];
+    const fillA = fillRgba[3];
+
+    // Increase tolerance slightly for anti-aliasing support
+    const TOLERANCE = 32;
+
+    if (Math.abs(startR - fillR) <= TOLERANCE &&
+        Math.abs(startG - fillG) <= TOLERANCE &&
+        Math.abs(startB - fillB) <= TOLERANCE &&
+        Math.abs(startA - fillA) <= TOLERANCE) {
+        return;
+    }
+
+    const matchStartColor = (pos) => {
+        return Math.abs(data[pos] - startR) <= TOLERANCE &&
+               Math.abs(data[pos+1] - startG) <= TOLERANCE &&
+               Math.abs(data[pos+2] - startB) <= TOLERANCE &&
+               Math.abs(data[pos+3] - startA) <= TOLERANCE;
+    };
+
+    const colorPixel = (pos) => {
+        data[pos] = fillR;
+        data[pos+1] = fillG;
+        data[pos+2] = fillB;
+        data[pos+3] = fillA;
+    };
+
+    const stack = [[startX, startY]];
+    
+    while(stack.length) {
+        let [x, y] = stack.pop();
+        let pixelPos = (y * width + x) * 4;
+        
+        while (y > 0 && matchStartColor(pixelPos - width * 4)) {
+            y--;
+            pixelPos -= width * 4;
+        }
+
+        let reachLeft = false;
+        let reachRight = false;
+        
+        while (y < height && matchStartColor(pixelPos)) {
+            colorPixel(pixelPos);
+            
+            if (x > 0) {
+                if (matchStartColor(pixelPos - 4)) {
+                    if (!reachLeft) {
+                        stack.push([x - 1, y]);
+                        reachLeft = true;
+                    }
+                } else if (reachLeft) {
+                    reachLeft = false;
+                }
+            }
+            
+            if (x < width - 1) {
+                if (matchStartColor(pixelPos + 4)) {
+                    if (!reachRight) {
+                        stack.push([x + 1, y]);
+                        reachRight = true;
+                    }
+                } else if (reachRight) {
+                    reachRight = false;
+                }
+            }
+            
+            y++;
+            pixelPos += width * 4;
+        }
+    }
+    
+    ctx.putImageData(colorData, 0, 0);
+};
+
 export default function CanvasBoard() {
     const containerRef = useRef(null);
     const canvasRef = useRef(null);
@@ -147,8 +254,12 @@ export default function CanvasBoard() {
             const canvas = canvasRef.current;
             const ctx = contextRef.current;
             if (!canvas || !ctx) return;
-            ctx.fillStyle = data.color;
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            if (data.x !== undefined && data.y !== undefined) {
+                executeFloodFill(ctx, data.x * canvas.width, data.y * canvas.height, data.color);
+            } else {
+                ctx.fillStyle = data.color;
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            }
         };
 
         const handleHistory = (history) => {
@@ -162,8 +273,12 @@ export default function CanvasBoard() {
             
             history.forEach(data => {
                 if (data.type === 'fill') {
-                    ctx.fillStyle = data.color;
-                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    if (data.x !== undefined && data.y !== undefined) {
+                        executeFloodFill(ctx, data.x * canvas.width, data.y * canvas.height, data.color);
+                    } else {
+                        ctx.fillStyle = data.color;
+                        ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    }
                 } else if (data.type === 'draw') {
                     const absX0 = data.x0 * canvas.width;
                     const absY0 = data.y0 * canvas.height;
@@ -260,8 +375,15 @@ export default function CanvasBoard() {
         currentStrokeId.current = Date.now().toString() + Math.random().toString(36).substring(2, 7);
 
         if (activeTool === 'fill') {
+            const pos = getMousePos(e);
+            const canvas = canvasRef.current;
             if (socket && roomId) {
-                socket.emit("fill_canvas", { roomId, color: activeColor });
+                socket.emit("fill_canvas", { 
+                    roomId, 
+                    color: activeColor,
+                    x: pos.x / canvas.width,
+                    y: pos.y / canvas.height
+                });
             }
             setIsDrawing(false); // don't continue drawing
             return;

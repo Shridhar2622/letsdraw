@@ -83,7 +83,7 @@ const nicknames = [
 
 export default function HomePage() {
     const socket = useSocket()
-    const { setPlayerAvtar: setGlobalAvatar, setPlayerName: setGlobalName, setRoomId } = useContext(PlayerContext);
+    const { setPlayerAvtar: setGlobalAvatar, setPlayerName: setGlobalName, setRoomId, roomId, setPlayerList } = useContext(PlayerContext);
     const [avatarIndex, setAvatarIndex] = useState(Math.floor(Math.random() * AVATARS.length));
     const selectedAvatar = AVATARS[avatarIndex].id;
     const [playerName, setPlayerName] = useState(nicknames[Math.floor(Math.random() * nicknames.length)]);
@@ -92,6 +92,12 @@ export default function HomePage() {
 
     useEffect(() => {
         if (!socket) return;
+
+        // Cleanly leave the room if the user navigated back to the home screen
+        socket.emit("leave_room");
+        setRoomId(null);
+        if (setPlayerList) setPlayerList([]);
+
         const handleRoomCreated = (data) => {
             console.log("Room Created:", data.roomId);
             setRoomId(data.roomId);

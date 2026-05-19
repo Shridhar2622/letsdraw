@@ -274,14 +274,13 @@ export default function socketHandler(io) {
             }
         });
 
-        // ── Player disconnects ────────────────────────────
-        socket.on("disconnect", () => {
-            console.log("User disconnected:", socket.id);
-            const room = getRoomBySocketId(socket.id);
+        // ── Helper to handle player leaving ───────────────
+        const handlePlayerLeave = (socketId) => {
+            const room = getRoomBySocketId(socketId);
             if (!room) return;
 
-            const leftPlayer = room.players.find(p => p.socketId === socket.id);
-            const { wasDrawer, allGuessed } = room.removePlayer(socket.id);
+            const leftPlayer = room.players.find(p => p.socketId === socketId);
+            const { wasDrawer, allGuessed } = room.removePlayer(socketId);
 
             if (room.isEmpty()) {
                 clearTimer(room.roomId);
@@ -355,6 +354,21 @@ export default function socketHandler(io) {
                     }
                 }
             }
+        };
+
+        // ── Player explicitly leaves ──────────────────────
+        socket.on("leave_room", () => {
+            const room = getRoomBySocketId(socket.id);
+            if (room) {
+                socket.leave(room.roomId);
+                handlePlayerLeave(socket.id);
+            }
+        });
+
+        // ── Player disconnects ────────────────────────────
+        socket.on("disconnect", () => {
+            console.log("User disconnected:", socket.id);
+            handlePlayerLeave(socket.id);
         });
     });
 }
