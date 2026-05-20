@@ -1,0 +1,37 @@
+{
+  "easy": [
+    "apple", "tree", "sun", "moon", "star", "car", "bus", "train", "house", "door", 
+    "window", "bed", "chair", "table", "shoe", "hat", "sock", "shirt", "pants", "ring", 
+    "book", "pen", "pencil", "cup", "plate", "fork", "spoon", "knife", "boat", "fish", 
+    "bird", "cow", "pig", "horse", "sheep", "duck", "chicken", "mouse", "frog", "bear", 
+    "ball", "bat", "glove", "kite", "balloon", "flower", "grass", "cloud", "rain", "snow", 
+    "cat", "dog", "elephant", "giraffe", "penguin", "dolphin", "butterfly", "spider", "snake", "parrot", 
+    "pizza", "burger", "ice cream", "banana", "watermelon", "cake", "popcorn", "sandwich", "donut", "sushi", 
+    "key", "clock", "candle", "backpack", "eye", "ear", "nose", "mouth", "hand", "foot", 
+    "arm", "leg", "bone", "heart", "smiley", "fire", "water", "earth", "wind", "ice", 
+    "leaf", "rock", "wood", "paper", "gold", "silver", "bronze", "crown", "sword", "shield"
+  ],
+  "medium": [
+    "guitar", "umbrella", "bicycle", "camera", "headphones", "sunglasses", "computer", "keyboard", "monitor", "printer", 
+    "television", "radio", "speaker", "microphone", "telephone", "hospital", "school", "library", "airport", "restaurant", 
+    "hotel", "bank", "museum", "theater", "policeman", "fireman", "doctor", "nurse", "teacher", "farmer", 
+    "artist", "singer", "dancer", "driver", "scissors", "hammer", "wrench", "screwdriver", "pliers", "saw", 
+    "drill", "ruler", "tape", "glue", "jacket", "sweater", "scarf", "gloves", "boots", "slippers", 
+    "sandals", "helmet", "belt", "tie", "dancing", "swimming", "sleeping", "fishing", "painting", "skydiving", 
+    "camping", "surfing", "cooking", "singing", "basketball", "football", "tennis", "baseball", "soccer", "volleyball", 
+    "golf", "hockey", "boxing", "wrestling", "pool", "stadium", "arena", "track", "court", "field", 
+    "goal", "net", "racket", "whistle", "uniform", "referee", "umpire", "coach", "player", "team"
+  ],
+  "hard": [
+    "mountain", "beach", "volcano", "lighthouse", "bridge", "castle", "igloo", "waterfall", "island", "forest", 
+    "rocket", "robot", "dinosaur", "pirate", "ninja", "unicorn", "dragon", "ghost", "alien", "wizard", 
+    "galaxy", "asteroid", "comet", "telescope", "microscope", "compass", "map", "globe", "architecture", "sculpture", 
+    "symphony", "orchestra", "ballet", "opera", "cinema", "literature", "black hole", "supernova", "nebula", "constellation", 
+    "observatory", "planetarium", "astronaut", "satellite", "spaceship", "meteorite", "hieroglyphs", "pyramid", "sphinx", "pharaoh", 
+    "gladiator", "colosseum", "samurai", "knight", "templar", "electricity", "magnetism", "radiation", "thermodynamics", "aerodynamics", 
+    "hydrodynamics", "ecosystem", "biodiversity", "conservation", "pollution", "recycling", "greenhouse", "climate", "tornado", "hurricane", 
+    "earthquake", "tsunami", "avalanche", "blizzard", "drought", "flood", "wildfire", "meteor", "eclipse", "equator", 
+    "latitude", "longitude", "hemisphere", "atmosphere", "stratosphere", "ozone", "oxygen", "nitrogen", "carbon", "hydrogen", 
+    "helium", "molecule", "atom", "proton", "neutron", "electron", "nucleus", "cell", "virus", "bacteria"
+  ]
+}

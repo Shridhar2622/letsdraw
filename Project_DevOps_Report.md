@@ -26,6 +26,8 @@ Modern software development requires robust CI/CD (Continuous Integration and Co
 4. **Jenkins** (Enterprise Automation Server)
 5. **Vercel** (Frontend Cloud Hosting)
 6. **Render** (Backend Cloud Hosting)
+7. **Prometheus** (Metrics & Time-Series Database)
+8. **Grafana** (Observability & Data Visualization)
 
 ---
 
@@ -56,3 +58,11 @@ Modern software development requires robust CI/CD (Continuous Integration and Co
 ### 3.6 Render
 * **What it is:** A unified cloud provider designed for hosting dynamic backend services and databases.
 * **Reason Used:** The Node.js and Socket.io backend requires a persistent, long-running server capable of maintaining hundreds of concurrent WebSocket connections. Render was selected because it natively supports Node.js web services, automatically manages SSL/HTTPS security certificates, and injects dynamic ports. It provides a highly reliable infrastructure to run the real-time multiplayer logic and data synchronization that powers the game.
+
+### 3.7 Prometheus
+* **What it is:** An open-source systems monitoring and alerting toolkit originally built at SoundCloud, designed to record real-time metrics in a highly efficient time-series database.
+* **Reason Used:** In a real-time multiplayer game like Doodle-Dash, understanding server health is critical. Prometheus is configured to continuously "scrape" our Node.js backend endpoints at specified intervals, collecting deep telemetry data—such as total active WebSocket connections, round completion latency, CPU load, and memory usage—without introducing any noticeable overhead to the game loop.
+
+### 3.8 Grafana
+* **What it is:** A wildly popular, highly customizable open-source analytics and interactive visualization web application.
+* **Reason Used:** While Prometheus collects the raw backend metrics, it lacks an intuitive interface. Grafana integrates directly with Prometheus to ingest that time-series data and render visually rich, live-updating dashboards. It empowers us to monitor the exact number of active drawing rooms, track concurrent players in real-time, instantly spot CPU spikes, and set up critical alerts for WebSocket drop-rates. This observability stack drastically reduces the time required to diagnose production bottlenecks.

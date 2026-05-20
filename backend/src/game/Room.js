@@ -1,4 +1,4 @@
-import { WORDS, MAX_PLAYERS, MAX_ROUNDS, ROUND_DURATION, GUESSER_POINTS, DRAWER_POINTS } from "./constants.js";
+import { WORDS_EASY, WORDS_MEDIUM, WORDS_HARD, MAX_PLAYERS, MAX_ROUNDS, ROUND_DURATION, GUESSER_POINTS, DRAWER_POINTS } from "./constants.js";
 
 export default class Room {
     constructor(roomId, hostPlayer) {
@@ -71,18 +71,21 @@ export default class Room {
     }
 
     selectWords() {
-        const availableWords = WORDS.filter(w => !this.usedWords.has(w));
-        const pool = availableWords.length >= 3 ? availableWords : WORDS;
+        // Pick one random word from a specific difficulty list
+        const getUnusedWord = (wordList) => {
+            const available = wordList.filter(w => !this.usedWords.has(w));
+            // If all words in this difficulty are used, fallback to the full list to prevent crashes
+            const pool = available.length > 0 ? available : wordList;
+            return pool[Math.floor(Math.random() * pool.length)];
+        };
+
+        // Option 1: The "Skill Choice" System -> [Easy, Medium, Hard]
+        this.wordChoices = [
+            getUnusedWord(WORDS_EASY),
+            getUnusedWord(WORDS_MEDIUM),
+            getUnusedWord(WORDS_HARD)
+        ];
         
-        const choices = [];
-        // Make a copy of pool so we can remove words we pick
-        const poolCopy = [...pool];
-        while(choices.length < 3 && poolCopy.length > 0) {
-            const idx = Math.floor(Math.random() * poolCopy.length);
-            choices.push(poolCopy[idx]);
-            poolCopy.splice(idx, 1);
-        }
-        this.wordChoices = choices;
         this.currentWord = null;
     }
 
