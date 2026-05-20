@@ -143,7 +143,7 @@ function MainGameScreen() {
         };
     }, [socket, roomId, setPlayerList, setCurrentDrawer, setWordHint, setCurrentRound, setGameState, setTimeRemaining, setCurrentWord]);
     return (
-        <div className='p-2 flex flex-col gap-2 md:gap-4 w-full h-screen overflow-hidden border-purple-800 bg-[#fefce8] bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] bg-size-[16px_16px] font-patrick'>
+        <div className='p-2 flex flex-col gap-2 md:gap-4 w-full h-[100dvh] overflow-hidden border-purple-800 bg-[#fefce8] bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] bg-size-[16px_16px] font-patrick'>
 
             {gameState === 'GAME_OVER' && <GameOverModal scoreboard={scoreboard} />}
             
