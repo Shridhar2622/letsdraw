@@ -116,6 +116,7 @@ export default function CanvasBoard() {
     const contextRef = useRef(null);
     const [isDrawing, setIsDrawing] = useState(false);
     const [draftShape, setDraftShape] = useState(null);
+    const [isDraggingShape, setIsDraggingShape] = useState(false);
 
     const socket = useSocket();
     const {
@@ -248,6 +249,8 @@ export default function CanvasBoard() {
             if (!canvas || !ctx) return;
             ctx.fillStyle = "#ffffff";
             ctx.fillRect(0, 0, canvas.width, canvas.height);
+            setDraftShape(null);
+            setIsDraggingShape(false);
         };
 
         const handleFill = (data) => {
@@ -371,6 +374,11 @@ export default function CanvasBoard() {
 
     const startDrawing = (e) => {
         if (!isMyTurn) return;
+
+        if (draftShape && !isDraggingShape && !['square', 'circle', 'triangle'].includes(activeTool)) {
+            commitShape(draftShape.type, draftShape.bounds);
+        }
+
         setIsDrawing(true);
         currentStrokeId.current = Date.now().toString() + Math.random().toString(36).substring(2, 7);
 
@@ -390,10 +398,13 @@ export default function CanvasBoard() {
         }
 
         if (['square', 'circle', 'triangle'].includes(activeTool)) {
-            if (!draftShape) {
-                const pos = getMousePos(e);
-                setDraftShape({ type: activeTool, pos });
+            const pos = getMousePos(e);
+            if (draftShape && !isDraggingShape) {
+                // If there's an uncommitted shape, commit it before starting a new one
+                commitShape(draftShape.type, draftShape.bounds);
             }
+            setDraftShape({ type: activeTool, bounds: { x: pos.x, y: pos.y, w: 0, h: 0, rotation: 0 }, startPos: pos });
+            setIsDraggingShape(true);
             return;
         }
 
@@ -406,10 +417,28 @@ export default function CanvasBoard() {
     };
 
     const finishDrawing = () => {
-        setIsDrawing(false);
+        if (isDrawing) setIsDrawing(false);
+        if (isDraggingShape) {
+            setIsDraggingShape(false);
+            if (draftShape && (draftShape.bounds.w < 10 || draftShape.bounds.h < 10)) {
+                setDraftShape(null); // Too small, cancel
+            }
+        }
     };
 
     const draw = (e) => {
+        if (isDraggingShape && draftShape) {
+            if (e.cancelable) e.preventDefault();
+            const pos = getMousePos(e);
+            const start = draftShape.startPos;
+            const x = Math.min(start.x, pos.x);
+            const y = Math.min(start.y, pos.y);
+            const w = Math.abs(pos.x - start.x);
+            const h = Math.abs(pos.y - start.y);
+            setDraftShape({ ...draftShape, bounds: { x, y, w, h, rotation: 0 } });
+            return;
+        }
+
         if (!isDrawing || !isMyTurn) return;
 
         // Prevent scrolling on touch devices while drawing
@@ -492,11 +521,12 @@ export default function CanvasBoard() {
             />
             {draftShape && isMyTurn && (
                 <ShapeOverlay 
-                    initialPos={draftShape.pos} 
+                    initialBounds={draftShape.bounds} 
                     type={draftShape.type} 
                     color={activeColor} 
                     strokeWidth={brushSize} 
                     parentRef={containerRef}
+                    isCreating={isDraggingShape}
                     onCommit={(bounds) => commitShape(draftShape.type, bounds)}
                     onCancel={() => setDraftShape(null)} 
                 />

@@ -11,7 +11,10 @@ export const PlayerProvider = ({ children }) => {
 
     // Drawing Tool State
     const [activeTool, setActiveTool] = useState('pencil');
-    const [activeColor, setActiveColor] = useState('#000000');
+    // Independent color memory
+    const [toolColors, setToolColors] = useState({ pencil: '#000000', fill: '#000000', shape: '#000000' });
+    const activeColor = toolColors[activeTool] || '#000000';
+    const setActiveColor = (color) => setToolColors(prev => ({ ...prev, [activeTool]: color }));
     // Independent stroke size memory
     const [brushSizes, setBrushSizes] = useState({ pencil: 5, eraser: 20, fill: 5 });
     const brushSize = brushSizes[activeTool] || 5;

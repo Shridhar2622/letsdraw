@@ -1,5 +1,6 @@
 import { createRoom, getRoom, deleteRoom, getRoomBySocketId } from "../game/gameManager.js";
 import { ROUND_DURATION } from "../game/constants.js";
+import { activePlayers, drawEventsTotal, messagesSentTotal } from "../metrics.js";
 
 // Store timer intervals per room so we can clear them
 const timers = new Map();
@@ -7,7 +8,8 @@ const timers = new Map();
 export default function socketHandler(io) {
 
     io.on("connection", (socket) => {
-
+        // Increment player count
+        activePlayers.inc();
 
         //testing playerJoined
         console.log("new player joined: ", socket.id)
@@ -36,13 +38,19 @@ export default function socketHandler(io) {
                         maxPlayers: room.maxPlayers
                     },
                     gameState: room.status,
-                    currentDrawer: room.status === "PLAYING" ? room.getCurrentDrawer() : null,
-                    wordHint: room.status === "PLAYING" ? room.getWordHint() : "",
+                    currentDrawer: (room.status === "PLAYING" || room.status === "CHOOSING_WORD") ? room.getCurrentDrawer() : null,
+                    wordHint: (room.status === "PLAYING" || room.status === "CHOOSING_WORD") ? room.getWordHint() : "",
                     round: room.round,
                     timeRemaining: room.status === "PLAYING" ? room.timer : 0
                 });
                 if (room.status === "PLAYING") {
                     socket.emit("draw_history", room.drawHistory);
+                }
+                if (room.status === "CHOOSING_WORD") {
+                    const drawer = room.getCurrentDrawer();
+                    if (drawer && drawer.socketId === socket.id) {
+                        socket.emit("word_choices", { words: room.wordChoices });
+                    }
                 }
             }
         });
@@ -85,6 +93,7 @@ export default function socketHandler(io) {
 
             // Notify EVERYONE in the room (including the joiner)
             io.to(room.roomId).emit("player_joined", {
+                roomId: room.roomId,
                 players: room.players,
                 status: room.status
             });
@@ -104,26 +113,23 @@ export default function socketHandler(io) {
             if (!room) return;
 
             room.startGame();
+            io.to(room.roomId).emit("game_started");
+            proceedToNextState(io, room);
+        });
 
-            io.to(room.roomId).emit("canvas_cleared");
-
-            io.to(room.roomId).emit("game_started", {
-                drawer: room.getCurrentDrawer(),
-                wordHint: room.getWordHint(),
-                round: room.round
-            });
-
-            // Send the actual word ONLY to the drawer
-            const drawer = room.getCurrentDrawer();
-            io.to(drawer.socketId).emit("word_to_draw", {
-                word: room.currentWord
-            });
-
-            startTimer(io, room);
+        // ── Drawer chooses a word ─────────────────────────
+        socket.on("word_chosen", (data) => {
+            const room = getRoom(data.roomId);
+            if (room && room.status === "CHOOSING_WORD" && room.getCurrentDrawer()?.socketId === socket.id) {
+                clearTimer(room.roomId);
+                room.setWord(data.word);
+                proceedToNextState(io, room);
+            }
         });
 
         // ── Drawing coordinates from the drawer ───────────
         socket.on("draw", (data) => {
+            drawEventsTotal.inc();
             const room = getRoom(data.roomId);
             if (room) {
                 room.drawHistory.push({ type: 'draw', ...data });
@@ -134,6 +140,7 @@ export default function socketHandler(io) {
 
         // ── Fill canvas ──────────────────────────────────
         socket.on("fill_canvas", (data) => {
+            drawEventsTotal.inc();
             const room = getRoom(data.roomId);
             if (room && room.status === "PLAYING") {
                 room.drawHistory.push({ type: 'fill', ...data });
@@ -205,6 +212,7 @@ export default function socketHandler(io) {
 
         // ── Player sends a guess ──────────────────────────
         socket.on("send_guess", (data) => {
+            messagesSentTotal.inc();
             const room = getRoom(data.roomId);
             if (!room) return;
 
@@ -237,23 +245,9 @@ export default function socketHandler(io) {
                     clearTimer(room.roomId);
                     room.nextTurn();
 
-                    if (room.status === "GAME_OVER") {
-                        io.to(room.roomId).emit("game_over", {
-                            scoreboard: room.getScoreboard()
-                        });
-                    } else {
-                        io.to(room.roomId).emit("canvas_cleared");
-                        io.to(room.roomId).emit("new_turn", {
-                            drawer: room.getCurrentDrawer(),
-                            wordHint: room.getWordHint(),
-                            round: room.round
-                        });
-                        const newDrawer = room.getCurrentDrawer();
-                        io.to(newDrawer.socketId).emit("word_to_draw", {
-                            word: room.currentWord
-                        });
-                        startTimer(io, room);
-                    }
+                    clearTimer(room.roomId);
+                    room.nextTurn();
+                    proceedToNextState(io, room);
                 }
             } else if (room.checkCloseGuess(data.message)) {
                 // Broadcast standard message but tell solely the sender they are close
@@ -294,19 +288,19 @@ export default function socketHandler(io) {
                     type: 'system'
                 });
 
-                if (room.players.length < 2 && room.status === "PLAYING") {
+                if (room.players.length < 2 && (room.status === "PLAYING" || room.status === "CHOOSING_WORD")) {
                     clearTimer(room.roomId);
                     room.status = "LOBBY";
                     room.round = 0;
                     room.currentDrawerIndex = 0;
                     io.to(room.roomId).emit("system_message", {
-                        text: "Not enough players! Game returned to lobby.",
+                        text: "Not enough players! Game over.",
                         type: 'system'
                     });
                     io.to(room.roomId).emit("game_over", {
                         scoreboard: room.getScoreboard()
                     });
-                } else if (room.status === "PLAYING") {
+                } else if (room.status === "PLAYING" || room.status === "CHOOSING_WORD") {
                     if (wasDrawer) {
                         io.to(room.roomId).emit("system_message", {
                             text: "The drawer left! Skipping turn...",
@@ -314,22 +308,14 @@ export default function socketHandler(io) {
                         });
                         
                         clearTimer(room.roomId);
-                        room.nextTurn(false); // pass false because index already points to next player
+                        room.nextTurn(false); 
                         
                         if (room.status === "GAME_OVER") {
                             io.to(room.roomId).emit("game_over", { scoreboard: room.getScoreboard() });
                         } else {
-                            io.to(room.roomId).emit("canvas_cleared");
-                            io.to(room.roomId).emit("new_turn", {
-                                drawer: room.getCurrentDrawer(),
-                                wordHint: room.getWordHint(),
-                                round: room.round
-                            });
-                            const newDrawer = room.getCurrentDrawer();
-                            io.to(newDrawer.socketId).emit("word_to_draw", { word: room.currentWord });
-                            startTimer(io, room);
+                            proceedToNextState(io, room);
                         }
-                    } else if (allGuessed) {
+                    } else if (allGuessed && room.status === "PLAYING") {
                         io.to(room.roomId).emit("system_message", {
                             text: "Everyone has guessed the word!",
                             type: 'system'
@@ -341,15 +327,7 @@ export default function socketHandler(io) {
                         if (room.status === "GAME_OVER") {
                             io.to(room.roomId).emit("game_over", { scoreboard: room.getScoreboard() });
                         } else {
-                            io.to(room.roomId).emit("canvas_cleared");
-                            io.to(room.roomId).emit("new_turn", {
-                                drawer: room.getCurrentDrawer(),
-                                wordHint: room.getWordHint(),
-                                round: room.round
-                            });
-                            const newDrawer = room.getCurrentDrawer();
-                            io.to(newDrawer.socketId).emit("word_to_draw", { word: room.currentWord });
-                            startTimer(io, room);
+                            proceedToNextState(io, room);
                         }
                     }
                 }
@@ -368,6 +346,7 @@ export default function socketHandler(io) {
         // ── Player disconnects ────────────────────────────
         socket.on("disconnect", () => {
             console.log("User disconnected:", socket.id);
+            activePlayers.dec();
             handlePlayerLeave(socket.id);
         });
     });
@@ -386,28 +365,27 @@ function startTimer(io, room) {
         });
 
         if (room.timer <= 0) {
-            clearInterval(interval);
-            timers.delete(room.roomId);
-
+            clearTimer(room.roomId);
             room.nextTurn();
+            proceedToNextState(io, room);
+        }
+    }, 1000);
 
-            if (room.status === "GAME_OVER") {
-                io.to(room.roomId).emit("game_over", {
-                    scoreboard: room.getScoreboard()
-                });
-            } else {
-                io.to(room.roomId).emit("canvas_cleared");
-                io.to(room.roomId).emit("new_turn", {
-                    drawer: room.getCurrentDrawer(),
-                    wordHint: room.getWordHint(),
-                    round: room.round
-                });
-                const newDrawer = room.getCurrentDrawer();
-                io.to(newDrawer.socketId).emit("word_to_draw", {
-                    word: room.currentWord
-                });
-                startTimer(io, room);
-            }
+    timers.set(room.roomId, interval);
+}
+
+function startChoiceTimer(io, room) {
+    clearTimer(room.roomId);
+    room.timer = 15; // 15 seconds to choose
+
+    const interval = setInterval(() => {
+        room.timer--;
+        io.to(room.roomId).emit("time_tick", { timeRemaining: room.timer });
+
+        if (room.timer <= 0) {
+            clearTimer(room.roomId);
+            room.setWord(room.wordChoices[0]); // Auto pick
+            proceedToNextState(io, room);
         }
     }, 1000);
 
@@ -419,5 +397,38 @@ function clearTimer(roomId) {
     if (interval) {
         clearInterval(interval);
         timers.delete(roomId);
+    }
+}
+
+function proceedToNextState(io, room) {
+    if (room.status === "GAME_OVER") {
+        io.to(room.roomId).emit("game_over", {
+            scoreboard: room.getScoreboard()
+        });
+    } else if (room.status === "CHOOSING_WORD") {
+        io.to(room.roomId).emit("canvas_cleared");
+        io.to(room.roomId).emit("choosing_word", {
+            drawer: room.getCurrentDrawer(),
+            round: room.round
+        });
+        const drawer = room.getCurrentDrawer();
+        if (drawer) {
+            io.to(drawer.socketId).emit("word_choices", {
+                words: room.wordChoices
+            });
+        }
+        startChoiceTimer(io, room);
+    } else if (room.status === "PLAYING") {
+        io.to(room.roomId).emit("canvas_cleared");
+        io.to(room.roomId).emit("new_turn", {
+            drawer: room.getCurrentDrawer(),
+            wordHint: room.getWordHint(),
+            round: room.round
+        });
+        const drawer = room.getCurrentDrawer();
+        if (drawer) {
+            io.to(drawer.socketId).emit("word_to_draw", { word: room.currentWord });
+        }
+        startTimer(io, room);
     }
 }

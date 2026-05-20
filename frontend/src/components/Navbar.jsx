@@ -4,8 +4,11 @@ import { LogOut, Timer } from "lucide-react"
 import { PlayerContext } from '../context/PlayerContext'
 import { gsap } from "gsap"
 import { useSocket } from '../context/SocketContext'
+import { useNavigate } from 'react-router-dom'
+
 function Navbar() {
   const socket = useSocket()
+  const navigate = useNavigate()
 
   const { currentWord, setCurrentWord, gameSettings, currentRound, setCurrentRound, wordHint, setWordHint, currentDrawer, setCurrentDrawer, timeRemaining } = useContext(PlayerContext)
 
@@ -73,14 +76,20 @@ function Navbar() {
 
       {/* Leave Button */}
       <div className="hidden sm:flex hover:scale-110 px-4 md:px-0 md:w-[15%] lg:w-[20%] xl:w-[15%] justify-end z-10">
-        <div className="flex transition-all hover:rotate-2 items-center justify-center gap-2 h-10 md:h-12 lg:h-14 bg-[#ffe3e3] border-2 border-red-600 -rotate-1 shadow-[3px_4px_0px_#FFA6A6] shrink-0 cursor-pointer px-4">
+        <div 
+            onClick={() => { socket.emit("leave_room"); navigate("/"); }}
+            className="flex transition-all hover:rotate-2 items-center justify-center gap-2 h-10 md:h-12 lg:h-14 bg-[#ffe3e3] border-2 border-red-600 -rotate-1 shadow-[3px_4px_0px_#FFA6A6] shrink-0 cursor-pointer px-4"
+        >
           <LogOut className="w-5 h-5 md:w-6 md:h-6" color="red" strokeWidth={2} />
           <h1 className='text-lg md:text-xl text-red-600 font-patrick font-bold hidden md:block'>Leave</h1>
         </div>
       </div>
 
       {/* Small Screen Leave Button (Icon only) */}
-      <div className="sm:hidden flex items-center justify-center p-2 rounded-xl bg-[#ffe3e3] border-2 border-red-600 shadow-[2px_3px_0px_#FFA6A6] cursor-pointer z-10">
+      <div 
+          onClick={() => { socket.emit("leave_room"); navigate("/"); }}
+          className="sm:hidden flex items-center justify-center p-2 rounded-xl bg-[#ffe3e3] border-2 border-red-600 shadow-[2px_3px_0px_#FFA6A6] cursor-pointer z-10"
+      >
         <LogOut className="w-5 h-5" color="red" strokeWidth={2} />
       </div>
 

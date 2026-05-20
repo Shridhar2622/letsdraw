@@ -23,27 +23,46 @@ export default function DrawerProfile({ currentDrawer, name, points, isYou, avat
         }
     }, [currentDrawer])
     return (
-        <div className={`w-full rounded-4xl h-20 flex items-center p-2 transition-all ${currentDrawer
-            ? "bg-[#fef3c7] border-purple-600 border-2 shadow-sm -rotate-2"
-            : "border border-gray-200 bg-white hover:bg-gray-50"
+        <div className={`w-full rounded-[1.5rem] h-[4.5rem] flex items-center p-3 transition-all relative ${currentDrawer
+            ? "bg-[#FFF8DC] border-purple-400 border-[2px] shadow-sm scale-[1.02] ml-1"
+            : "border border-purple-200 bg-white hover:bg-purple-50"
             }`}>
-            <img src={avatarImg} className='w-12 h-12 rounded-full border border-purple-900 mr-3' alt="avatar" />
+            {/* Active Drawer decorative elements */}
+            {currentDrawer && (
+                <>
+                    <svg className="absolute -top-3 -left-4 w-8 h-8 text-purple-600" viewBox="0 0 24 24">
+                        <path d="M4 12 Q 8 6 12 4 M8 16 Q 14 10 18 8 M12 20 Q 18 14 22 12" fill="transparent" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                    </svg>
+                    <div className="absolute -bottom-2 -right-2 text-2xl animate-bounce">💗</div>
+                </>
+            )}
+
+            <div className="relative">
+                <div className={`absolute inset-0 rounded-full blur-[6px] opacity-40 ${currentDrawer ? 'bg-yellow-400' : 'bg-purple-200'}`}></div>
+                <img src={avatarImg} className='relative w-12 h-12 rounded-full border border-purple-200 mr-4 bg-white' alt="avatar" />
+            </div>
 
             <div className='flex flex-col justify-center flex-1 min-w-0'>
-                <p className={`text-lg font-patrick leading-tight truncate ${currentDrawer ? "text-purple-800 font-bold" : "text-gray-800"}`}>
-                    {name} {isYou && <span className="text-sm text-gray-500 font-normal ml-1 inline-block">(you)</span>}
+                <p className={`text-xl font-patrick leading-tight truncate font-bold ${currentDrawer ? "text-purple-900" : "text-purple-800"}`}>
+                    {name} {isYou && <span className="text-sm text-purple-400 font-normal ml-1 inline-block">(you)</span>}
                 </p>
-                <p className={`text-sm font-patrick px-2 py-0.5 mt-0.5 rounded-full inline-block w-fit ${currentDrawer ? "bg-white text-purple-700 font-bold" : "bg-gray-100 text-gray-600"
+                <p className={`text-sm font-patrick px-3 py-0.5 mt-0.5 rounded-full inline-block w-fit border ${currentDrawer ? "bg-[#FFF0BA] text-yellow-700 border-yellow-300 font-bold" : "bg-purple-50 text-purple-500 border-purple-100 font-semibold"
                     }`}>
                     {points} pts
                 </p>
             </div>
 
-            {currentDrawer && (
-                <div ref={pencilRef} className="ml-auto text-xl" title="Currently Drawing">
-                    <Pencil color="black" strokeWidth={1} absoluteStrokeWidth />
-                </div>
-            )}
+            <div className="ml-auto flex items-center justify-center">
+                {currentDrawer ? (
+                    <div ref={pencilRef} className="w-8 h-8 rounded-full border border-yellow-600/30 flex items-center justify-center bg-[#FFF4CE]" title="Currently Drawing">
+                        <Pencil color="#854D0E" size={16} strokeWidth={2.5} />
+                    </div>
+                ) : (
+                    <div className="text-purple-200 text-2xl" title="Waiting">
+                        ★
+                    </div>
+                )}
+            </div>
         </div>
     )
 }

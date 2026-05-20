@@ -22,12 +22,12 @@ function JoinRoom({ show, set }) {
         const handlePlayerJoined = (data) => {
             console.log("Joined room successfully!", data);
             set(false); // Close modal
-            setRoom(roomId.join(""));
+            setRoom(data.roomId);
             // If game is already playing, go directly to the game screen
             if (data.status === "PLAYING") {
-                navigate('/game');
+                navigate(`/game/${data.roomId}`);
             } else {
-                navigate('/createGame');
+                navigate(`/room/${data.roomId}`);
             }
         };
 

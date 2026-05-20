@@ -1,0 +1,40 @@
+{
+  "title": "Doodle-Dash Game Metrics",
+  "tags": [ "letsdraw" ],
+  "timezone": "browser",
+  "panels": [
+    {
+      "type": "stat",
+      "title": "Active Players Connected",
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 0 },
+      "targets": [ { "expr": "letsdraw_active_players" } ],
+      "fieldConfig": {
+        "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null }, { "color": "orange", "value": 50 }, { "color": "red", "value": 100 } ] } }
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Active Game Rooms",
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 0 },
+      "targets": [ { "expr": "letsdraw_active_rooms" } ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Draw Events (Strokes/sec)",
+      "gridPos": { "h": 8, "w": 16, "x": 0, "y": 8 },
+      "targets": [ { "expr": "rate(letsdraw_draw_events_total[30s])", "legendFormat": "Strokes/sec" } ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Node.js CPU Usage",
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 0 },
+      "targets": [ { "expr": "rate(process_cpu_seconds_total[1m])", "legendFormat": "CPU %" } ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Memory Usage (Heap)",
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 8 },
+      "targets": [ { "expr": "nodejs_heap_size_used_bytes", "legendFormat": "Bytes Used" } ]
+    }
+  ]
+}

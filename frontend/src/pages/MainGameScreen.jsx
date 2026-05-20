@@ -1,5 +1,6 @@
 import { useEffect, useState, useContext } from 'react'
 import { useSocket } from '../context/SocketContext'
+import { useNavigate, useParams } from 'react-router-dom'
 
 import PlayerList from '../components/PlayerList'
 import { PlayerContext } from '../context/PlayerContext'
@@ -14,8 +15,10 @@ import GameOverModal from '../components/GameOverModal'
 
 function MainGameScreen() {
     const {
-        roomId,
+        roomId: contextRoomId,
+        setRoomId,
         setPlayerList,
+        PlayerName,
         currentDrawer,
         setCurrentDrawer,
         setWordHint,
@@ -27,13 +30,29 @@ function MainGameScreen() {
         gameState
     } = useContext(PlayerContext);
     const socket = useSocket();
+    const navigate = useNavigate();
+    const { roomId: urlRoomId } = useParams();
+    const roomId = contextRoomId || urlRoomId;
     const [scoreboard, setScoreboard] = useState(null);
-    const [showTurnModal, setShowTurnModal] = useState(false);
+    const [wordChoices, setWordChoices] = useState([]);
+
+    const handleWordChoice = (word) => {
+        if (socket && roomId) {
+            socket.emit("word_chosen", { roomId, word });
+        }
+    };
     
     const isMyTurn = currentDrawer?.socketId === socket?.id;
 
     useEffect(() => {
-        if (!socket || !roomId) return;
+        if (!socket || !PlayerName) {
+            navigate(`/?join=${urlRoomId || roomId || ''}`);
+            return;
+        }
+        
+        if (!contextRoomId && urlRoomId) {
+            setRoomId(urlRoomId);
+        }
 
         socket.emit("get_room_info", { roomId });
 
@@ -54,7 +73,7 @@ function MainGameScreen() {
                 }
 
                 // If joining an already started game, sync the game state
-                if (data.gameState === "PLAYING") {
+                if (data.gameState === "PLAYING" || data.gameState === "CHOOSING_WORD") {
                     setCurrentDrawer(data.currentDrawer);
                     setWordHint(data.wordHint);
                     setCurrentRound(data.round);
@@ -63,45 +82,35 @@ function MainGameScreen() {
             }
         }
 
-        function handleGameStarted(data) {
+        function handleChoosingWord(data) {
             setCurrentDrawer(data.drawer);
-            setWordHint(data.wordHint);
             setCurrentRound(data.round);
-            setGameState("PLAYING");
-            
-            // Re-map player list
+            setGameState("CHOOSING_WORD");
+            setCurrentWord(null);
+            setWordChoices([]);
             setPlayerList(prev => prev.map(p => ({
                 ...p,
                 isDrawer: p.socketId === data.drawer.socketId
             })));
-
-            setShowTurnModal(true);
-            setTimeout(() => setShowTurnModal(false), 3000);
         }
 
         function handleNewTurn(data) {
             setCurrentDrawer(data.drawer);
             setWordHint(data.wordHint);
             setCurrentRound(data.round);
-            setCurrentWord(null); // Clear previous word immediately
-
-            // Re-map player list to visually move the drawer icon
+            setGameState("PLAYING");
             setPlayerList(prev => prev.map(p => ({
                 ...p,
                 isDrawer: p.socketId === data.drawer.socketId
             })));
-            
-            // Show turn modal
-            setShowTurnModal(true);
-            setTimeout(() => setShowTurnModal(false), 3000);
         }
 
         socket.on("room_info", handleRoomInfo);
         socket.on("player_joined", handleRoomInfo);
         socket.on("player_left", handleRoomInfo);
-        socket.on("game_started", handleGameStarted);
 
-        // Listeners for in-game events
+        socket.on("choosing_word", handleChoosingWord);
+        socket.on("word_choices", (data) => setWordChoices(data.words));
         socket.on("new_turn", handleNewTurn);
         socket.on("word_to_draw", (data) => setCurrentWord(data.word));
         socket.on("time_tick", (data) => setTimeRemaining(data.timeRemaining));
@@ -121,9 +130,9 @@ function MainGameScreen() {
             socket.off("room_info", handleRoomInfo);
             socket.off("player_joined", handleRoomInfo);
             socket.off("player_left", handleRoomInfo);
-            socket.off("game_started", handleGameStarted);
-
-            socket.off("new_turn", handleNewTurn);
+            socket.off("choosing_word");
+            socket.off("word_choices");
+            socket.off("new_turn");
             socket.off("word_to_draw");
             socket.off("time_tick");
             socket.off("game_over");
@@ -136,27 +145,30 @@ function MainGameScreen() {
 
             {gameState === 'GAME_OVER' && <GameOverModal scoreboard={scoreboard} />}
             
-            {showTurnModal && currentDrawer && (
+            {gameState === 'CHOOSING_WORD' && currentDrawer && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 font-patrick">
                    <div className="bg-white border-4 border-purple-800 rounded-[30px] shadow-[8px_10px_0px_#D8B4FE] p-8 md:p-12 text-center">
                       <h2 className="text-4xl md:text-6xl font-black text-purple-900 tracking-wider mb-2">
                           {isMyTurn ? "Your Turn!" : `${currentDrawer.name}'s Turn!`}
                       </h2>
-                      <p className="text-xl md:text-2xl text-purple-600 font-bold">
-                          {isMyTurn ? "Get ready to draw!" : "Get ready to guess!"}
+                      <p className="text-xl md:text-2xl text-purple-600 font-bold mb-6">
+                          {isMyTurn ? "Choose a word to draw:" : "Waiting for drawer to choose a word..."}
                       </p>
 
-                      {/* FUTURE FEATURE STUB: Word Selection */}
-                      {isMyTurn && gameState === 'CHOOSING_WORD' && (
-                          <div className="mt-8 border-t-2 border-dashed border-purple-200 pt-6">
-                             <h3 className="text-2xl font-bold text-purple-800 mb-4">Choose a word to draw:</h3>
+                      {isMyTurn && wordChoices.length > 0 && (
+                          <div className="border-t-2 border-dashed border-purple-200 pt-6">
                              <div className="flex gap-4 justify-center flex-wrap">
-                                 {['Word 1', 'Word 2', 'Word 3', 'Word 4'].map(word => (
-                                     <button key={word} className="px-6 py-2 bg-[#fefce8] border-4 border-purple-800 rounded-2xl text-xl font-bold text-purple-900 hover:bg-yellow-100 hover:-translate-y-1 transition-all shadow-[2px_3px_0px_#FCD34D]">
+                                 {wordChoices.map(word => (
+                                     <button key={word} onClick={() => handleWordChoice(word)} className="px-6 py-2 bg-[#fefce8] border-4 border-purple-800 rounded-2xl text-xl font-bold text-purple-900 hover:bg-yellow-100 hover:-translate-y-1 transition-all shadow-[2px_3px_0px_#FCD34D] uppercase">
                                         {word}
                                      </button>
                                  ))}
                              </div>
+                          </div>
+                      )}
+                      {!isMyTurn && (
+                          <div className="flex justify-center mt-4">
+                             <div className="w-8 h-8 border-4 border-purple-800 border-t-transparent rounded-full animate-spin"></div>
                           </div>
                       )}
                    </div>

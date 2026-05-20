@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Sparkles, Star, Pencil, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useSocket } from "../context/SocketContext"
 import JoinRoom from '../components/JoinRoom'
@@ -88,6 +88,8 @@ export default function HomePage() {
     const selectedAvatar = AVATARS[avatarIndex].id;
     const [playerName, setPlayerName] = useState(nicknames[Math.floor(Math.random() * nicknames.length)]);
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
+    const joinRoomId = searchParams.get('join');
     const [showModel, setShowModel] = useState(false);
 
     useEffect(() => {
@@ -101,7 +103,7 @@ export default function HomePage() {
         const handleRoomCreated = (data) => {
             console.log("Room Created:", data.roomId);
             setRoomId(data.roomId);
-            navigate('/createGame');
+            navigate(`/room/${data.roomId}`);
         };
 
         socket.on("room_created", handleRoomCreated);
@@ -122,9 +124,11 @@ export default function HomePage() {
         setGlobalName(playerName);
         setGlobalAvatar(selectedAvatar);
 
-        // In the future, this might open a modal to enter a room code
-        // For now, let's just navigate to the game screen
-        setShowModel(true)
+        if (joinRoomId) {
+            socket.emit('join_room', { roomId: joinRoomId, name: playerName, avatar: selectedAvatar });
+        } else {
+            setShowModel(true)
+        }
     };
 
     const handleCreateGame = () => {
@@ -142,7 +146,57 @@ export default function HomePage() {
     };
 
     return (
-        <div className="relative h-dvh overflow-hidden w-full bg-[#fefce8] bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] bg-size-[16px_16px] flex items-center justify-center p-2 md:p-4 font-patrick">
+        <div className="relative h-dvh overflow-hidden w-full bg-[#FDF5E6] flex items-center justify-center p-2 md:p-4 font-patrick">
+            {/* --- Background Floating Avatars & Decor --- */}
+            <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
+                {/* Top Left: Puppy */}
+                <div className="absolute top-[5%] left-[5%] md:top-[10%] md:left-[10%] animate-[float_6s_ease-in-out_infinite]">
+                    <img src={PuppyAvatar} alt="Puppy" className="w-24 md:w-36 drop-shadow-xl -rotate-6" />
+                    {/* Dashed trail */}
+                    <svg className="absolute -bottom-10 -right-16 w-32 h-20 opacity-40 hidden md:block" viewBox="0 0 100 100">
+                        <path d="M 0,0 C 30,40 70,-10 100,50" fill="transparent" stroke="#A78BFA" strokeWidth="2" strokeDasharray="5,5" />
+                    </svg>
+                    <Star className="absolute -top-4 -left-6 text-pink-400 w-6 h-6 fill-current animate-pulse" />
+                </div>
+
+                {/* Top Right: Panda */}
+                <div className="absolute top-[8%] right-[5%] md:top-[12%] md:right-[10%] animate-[float_7s_ease-in-out_infinite_reverse]">
+                    <img src={PandaAvatar} alt="Panda" className="w-28 md:w-40 drop-shadow-xl rotate-6" />
+                    <svg className="absolute -bottom-12 -left-12 w-24 h-24 opacity-40 hidden md:block" viewBox="0 0 100 100">
+                        <path d="M 100,0 C 50,50 60,-20 0,60" fill="transparent" stroke="#A78BFA" strokeWidth="2" strokeDasharray="5,5" />
+                    </svg>
+                    <div className="absolute -top-6 -right-2 text-pink-400 text-2xl animate-bounce">💖</div>
+                </div>
+
+                {/* Bottom Left: Penguin */}
+                <div className="absolute bottom-[10%] left-[3%] md:bottom-[15%] md:left-[8%] animate-[float_5s_ease-in-out_infinite]">
+                    <img src={PenguinAvatar} alt="Penguin" className="w-28 md:w-44 drop-shadow-xl -rotate-12" />
+                    <svg className="absolute -right-20 top-1/2 w-32 h-10 opacity-40 hidden md:block" viewBox="0 0 100 50">
+                        <path d="M 0,25 Q 25,50 50,25 T 100,25" fill="transparent" stroke="#A78BFA" strokeWidth="2" strokeDasharray="5,5" />
+                    </svg>
+                    <Star className="absolute top-0 -left-6 text-yellow-400 w-8 h-8 fill-current animate-pulse" />
+                </div>
+
+                {/* Bottom Center: Frog */}
+                <div className="absolute bottom-[2%] left-[40%] md:bottom-[5%] md:left-[45%] animate-[float_6.5s_ease-in-out_infinite_1s]">
+                    <img src={FrogAvtar} alt="Frog" className="w-20 md:w-32 drop-shadow-xl rotate-3" />
+                    <div className="absolute -top-4 -right-8 text-pink-400 text-xl animate-pulse">💕</div>
+                </div>
+
+                {/* Bottom Right: Cat */}
+                <div className="absolute bottom-[5%] right-[5%] md:bottom-[10%] md:right-[8%] animate-[float_5.5s_ease-in-out_infinite_reverse]">
+                    <img src={CatAvatar} alt="Cat" className="w-28 md:w-40 drop-shadow-xl rotate-12" />
+                    <svg className="absolute -top-16 -left-10 w-20 h-32 opacity-40 hidden md:block" viewBox="0 0 50 100">
+                        <path d="M 25,100 Q -10,50 25,0" fill="transparent" stroke="#A78BFA" strokeWidth="2" strokeDasharray="5,5" />
+                    </svg>
+                </div>
+                
+                {/* Random background stars and flowers */}
+                <Star className="absolute top-[30%] left-[20%] text-yellow-300 w-6 h-6 fill-current opacity-60" />
+                <Star className="absolute top-[40%] right-[15%] text-pink-300 w-5 h-5 fill-current opacity-60" />
+                <Star className="absolute bottom-[30%] right-[30%] text-purple-300 w-7 h-7 fill-current opacity-60" />
+            </div>
+
             {/* The Modal Component (should be toggled via state in the future) */}
             <JoinRoom show={showModel} set={setShowModel} />
 
@@ -229,6 +283,12 @@ export default function HomePage() {
                         type="text"
                         value={playerName}
                         onChange={(e) => setPlayerName(e.target.value)}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                                if (joinRoomId) handleJoinGame();
+                                else handleCreateGame();
+                            }
+                        }}
                         placeholder="Enter a cool nickname..."
                         className="w-full bg-white border-4 border-purple-800 rounded-xl md:rounded-2xl px-4 py-2 md:px-6 md:py-4 text-lg md:text-2xl font-bold text-purple-900 placeholder:text-purple-300 outline-none focus:ring-4 focus:ring-yellow-300 shadow-[3px_4px_0px_#D8B4FE] md:shadow-[4px_5px_0px_#D8B4FE] transition-all"
                         maxLength={15}

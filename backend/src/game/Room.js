@@ -14,6 +14,8 @@ export default class Room {
         this.timer = ROUND_DURATION;
         this.drawHistory = [];
         this.redoHistory = [];
+        this.usedWords = new Set();
+        this.wordChoices = [];
         // Auto-add the host as the first player
         this.addPlayer(hostPlayer);
     }
@@ -58,18 +60,36 @@ export default class Room {
     // ── Game Flow ─────────────────────────────────────
 
     startGame() {
-        this.status = "PLAYING";
+        this.status = "CHOOSING_WORD";
         this.round = 1;
         this.currentDrawerIndex = 0;
         this.drawHistory = [];
         this.redoHistory = [];
+        this.usedWords = new Set();
         this.players[0].isDrawer = true;
-        this.selectWord();
+        this.selectWords();
     }
 
-    selectWord() {
-        const word = WORDS[Math.floor(Math.random() * WORDS.length)];
+    selectWords() {
+        const availableWords = WORDS.filter(w => !this.usedWords.has(w));
+        const pool = availableWords.length >= 3 ? availableWords : WORDS;
+        
+        const choices = [];
+        // Make a copy of pool so we can remove words we pick
+        const poolCopy = [...pool];
+        while(choices.length < 3 && poolCopy.length > 0) {
+            const idx = Math.floor(Math.random() * poolCopy.length);
+            choices.push(poolCopy[idx]);
+            poolCopy.splice(idx, 1);
+        }
+        this.wordChoices = choices;
+        this.currentWord = null;
+    }
+
+    setWord(word) {
         this.currentWord = word;
+        this.usedWords.add(word);
+        this.status = "PLAYING";
     }
 
     nextTurn(advanceIndex = true) {
@@ -101,7 +121,8 @@ export default class Room {
         this.players[this.currentDrawerIndex].isDrawer = true;
         this.drawHistory = [];
         this.redoHistory = [];
-        this.selectWord();
+        this.status = "CHOOSING_WORD";
+        this.selectWords();
     }
 
     // ── Gameplay ──────────────────────────────────────

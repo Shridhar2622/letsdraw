@@ -1,15 +1,13 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { Check, X, RotateCw } from 'lucide-react';
 
-export default function ShapeOverlay({ initialPos, type, color, strokeWidth, parentRef, onCommit, onCancel }) {
-    const minSize = 20;
-    const [bounds, setBounds] = useState({
-        x: initialPos.x - 50,
-        y: initialPos.y - 50,
-        w: 100,
-        h: 100,
-        rotation: 0
-    });
+export default function ShapeOverlay({ initialBounds, type, color, strokeWidth, parentRef, onCommit, onCancel, isCreating }) {
+    const minSize = 5;
+    const [bounds, setBounds] = useState(initialBounds);
+
+    useEffect(() => {
+        setBounds(initialBounds);
+    }, [initialBounds]);
 
     const dragStart = useRef(null);
     const dragMode = useRef(null);
@@ -109,7 +107,8 @@ export default function ShapeOverlay({ initialPos, type, color, strokeWidth, par
         transform: `rotate(${bounds.rotation}deg)`,
         border: '2px dashed #3b82f6',
         zIndex: 50,
-        boxSizing: 'border-box'
+        boxSizing: 'border-box',
+        pointerEvents: isCreating ? 'none' : 'auto'
     };
 
     const handleBox = "absolute w-4 h-4 bg-white border-2 border-blue-500 rounded-full z-10";
@@ -121,11 +120,11 @@ export default function ShapeOverlay({ initialPos, type, color, strokeWidth, par
             {/* The Shape itself rendered via SVG (for display only) */}
             <svg width="100%" height="100%" style={{ overflow: 'visible' }}>
                 {type === 'square' && (
-                    <rect x={strokeWidth/2} y={strokeWidth/2} width={bounds.w - strokeWidth} height={bounds.h - strokeWidth}
+                    <rect x={strokeWidth/2} y={strokeWidth/2} width={Math.max(0, bounds.w - strokeWidth)} height={Math.max(0, bounds.h - strokeWidth)}
                           fill="transparent" stroke={color} strokeWidth={strokeWidth} strokeLinejoin="round" />
                 )}
                 {type === 'circle' && (
-                    <ellipse cx={bounds.w/2} cy={bounds.h/2} rx={(bounds.w - strokeWidth)/2} ry={(bounds.h - strokeWidth)/2}
+                    <ellipse cx={bounds.w/2} cy={bounds.h/2} rx={Math.max(0, (bounds.w - strokeWidth)/2)} ry={Math.max(0, (bounds.h - strokeWidth)/2)}
                              fill="transparent" stroke={color} strokeWidth={strokeWidth} />
                 )}
                 {type === 'triangle' && (
@@ -136,40 +135,44 @@ export default function ShapeOverlay({ initialPos, type, color, strokeWidth, par
 
             {/* Drag Handle (Full Box Cover) */}
             <div 
-                className="absolute inset-0 cursor-move" 
-                onMouseDown={(e) => handleDown(e, 'move')}
-                onTouchStart={(e) => handleDown(e, 'move')}
+                className={`absolute inset-0 ${isCreating ? 'pointer-events-none' : 'cursor-move'}`} 
+                onMouseDown={(e) => !isCreating && handleDown(e, 'move')}
+                onTouchStart={(e) => !isCreating && handleDown(e, 'move')}
             />
 
-            {/* Resize Handles */}
-            <div className={`${handleBox} -top-2 -left-2 cursor-nwse-resize`} onMouseDown={(e)=>handleDown(e,'resize-nw')} onTouchStart={(e)=>handleDown(e,'resize-nw')} />
-            <div className={`${handleBox} -top-2 -right-2 cursor-nesw-resize`} onMouseDown={(e)=>handleDown(e,'resize-ne')} onTouchStart={(e)=>handleDown(e,'resize-ne')} />
-            <div className={`${handleBox} -bottom-2 -left-2 cursor-nesw-resize`} onMouseDown={(e)=>handleDown(e,'resize-sw')} onTouchStart={(e)=>handleDown(e,'resize-sw')} />
-            <div className={`${handleBox} -bottom-2 -right-2 cursor-nwse-resize`} onMouseDown={(e)=>handleDown(e,'resize-se')} onTouchStart={(e)=>handleDown(e,'resize-se')} />
-            
-            <div className={`${handleBox} -top-2 left-1/2 -translate-x-1/2 cursor-ns-resize`} onMouseDown={(e)=>handleDown(e,'resize-n')} onTouchStart={(e)=>handleDown(e,'resize-n')} />
-            <div className={`${handleBox} -bottom-2 left-1/2 -translate-x-1/2 cursor-ns-resize`} onMouseDown={(e)=>handleDown(e,'resize-s')} onTouchStart={(e)=>handleDown(e,'resize-s')} />
-            <div className={`${handleBox} top-1/2 -left-2 -translate-y-1/2 cursor-ew-resize`} onMouseDown={(e)=>handleDown(e,'resize-w')} onTouchStart={(e)=>handleDown(e,'resize-w')} />
-            <div className={`${handleBox} top-1/2 -right-2 -translate-y-1/2 cursor-ew-resize`} onMouseDown={(e)=>handleDown(e,'resize-e')} onTouchStart={(e)=>handleDown(e,'resize-e')} />
+            {!isCreating && (
+                <>
+                    {/* Resize Handles */}
+                    <div className={`${handleBox} -top-2 -left-2 cursor-nwse-resize`} onMouseDown={(e)=>handleDown(e,'resize-nw')} onTouchStart={(e)=>handleDown(e,'resize-nw')} />
+                    <div className={`${handleBox} -top-2 -right-2 cursor-nesw-resize`} onMouseDown={(e)=>handleDown(e,'resize-ne')} onTouchStart={(e)=>handleDown(e,'resize-ne')} />
+                    <div className={`${handleBox} -bottom-2 -left-2 cursor-nesw-resize`} onMouseDown={(e)=>handleDown(e,'resize-sw')} onTouchStart={(e)=>handleDown(e,'resize-sw')} />
+                    <div className={`${handleBox} -bottom-2 -right-2 cursor-nwse-resize`} onMouseDown={(e)=>handleDown(e,'resize-se')} onTouchStart={(e)=>handleDown(e,'resize-se')} />
+                    
+                    <div className={`${handleBox} -top-2 left-1/2 -translate-x-1/2 cursor-ns-resize`} onMouseDown={(e)=>handleDown(e,'resize-n')} onTouchStart={(e)=>handleDown(e,'resize-n')} />
+                    <div className={`${handleBox} -bottom-2 left-1/2 -translate-x-1/2 cursor-ns-resize`} onMouseDown={(e)=>handleDown(e,'resize-s')} onTouchStart={(e)=>handleDown(e,'resize-s')} />
+                    <div className={`${handleBox} top-1/2 -left-2 -translate-y-1/2 cursor-ew-resize`} onMouseDown={(e)=>handleDown(e,'resize-w')} onTouchStart={(e)=>handleDown(e,'resize-w')} />
+                    <div className={`${handleBox} top-1/2 -right-2 -translate-y-1/2 cursor-ew-resize`} onMouseDown={(e)=>handleDown(e,'resize-e')} onTouchStart={(e)=>handleDown(e,'resize-e')} />
 
-            {/* Rotation Handle */}
-            <div className="absolute -top-12 left-1/2 -translate-x-1/2 w-8 h-8 bg-white text-blue-500 border-2 border-blue-500 rounded-full cursor-pointer flex items-center justify-center z-10 hover:bg-blue-50"
-                 onMouseDown={(e)=>handleDown(e,'rotate')} onTouchStart={(e)=>handleDown(e,'rotate')}>
-                <RotateCw size={16} strokeWidth={3} />
-            </div>
+                    {/* Rotation Handle */}
+                    <div className="absolute -top-12 left-1/2 -translate-x-1/2 w-8 h-8 bg-white text-blue-500 border-2 border-blue-500 rounded-full cursor-pointer flex items-center justify-center z-10 hover:bg-blue-50"
+                         onMouseDown={(e)=>handleDown(e,'rotate')} onTouchStart={(e)=>handleDown(e,'rotate')}>
+                        <RotateCw size={16} strokeWidth={3} />
+                    </div>
 
-            {/* Connect Line to Rotator */}
-            <div className="absolute -top-8 left-1/2 w-0.5 h-8 bg-blue-500 -translate-x-1/2 pointer-events-none" />
+                    {/* Connect Line to Rotator */}
+                    <div className="absolute -top-8 left-1/2 w-0.5 h-8 bg-blue-500 -translate-x-1/2 pointer-events-none" />
 
-            {/* Action Buttons (Commit / Cancel) placed statically relative to the container but reversed rotation so they aren't upside down if rotated! */}
-            <div className="absolute -bottom-14 left-1/2 -translate-x-1/2 flex items-center gap-2" style={{ transform: `rotate(${-bounds.rotation}deg)` }}>
-                <button onClick={(e) => { e.stopPropagation(); onCancel(); }} className="w-10 h-10 bg-red-500 rounded-full text-white flex items-center justify-center shadow-md hover:bg-red-600 transition-colors">
-                    <X size={20} strokeWidth={3} />
-                </button>
-                <button onClick={(e) => { e.stopPropagation(); onCommit(bounds); }} className="w-10 h-10 bg-green-500 rounded-full text-white flex items-center justify-center shadow-md hover:bg-green-600 transition-colors">
-                    <Check size={20} strokeWidth={3} />
-                </button>
-            </div>
+                    {/* Action Buttons (Commit / Cancel) placed statically relative to the container but reversed rotation so they aren't upside down if rotated! */}
+                    <div className="absolute -bottom-14 left-1/2 -translate-x-1/2 flex items-center gap-2" style={{ transform: `rotate(${-bounds.rotation}deg)` }}>
+                        <button onClick={(e) => { e.stopPropagation(); onCancel(); }} className="w-10 h-10 bg-red-500 rounded-full text-white flex items-center justify-center shadow-md hover:bg-red-600 transition-colors">
+                            <X size={20} strokeWidth={3} />
+                        </button>
+                        <button onClick={(e) => { e.stopPropagation(); onCommit(bounds); }} className="w-10 h-10 bg-green-500 rounded-full text-white flex items-center justify-center shadow-md hover:bg-green-600 transition-colors">
+                            <Check size={20} strokeWidth={3} />
+                        </button>
+                    </div>
+                </>
+            )}
         </div>
     );
 }

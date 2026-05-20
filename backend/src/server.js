@@ -5,6 +5,7 @@ import express from "express"
 import http from "http"
 import { Server } from "socket.io"
 import socketHandler from "./socket/socketHandller.js"
+import { getMetrics, getContentType } from "./metrics.js"
 
 const app = express()
 
@@ -22,6 +23,16 @@ const io = new Server(server, {
 app.get("/", (req, res) => {
   res.send("SKRIBBLE Backend Running 🚀")
 })
+
+// Prometheus metrics endpoint
+app.get("/metrics", async (req, res) => {
+    try {
+        res.set('Content-Type', getContentType());
+        res.end(await getMetrics());
+    } catch (ex) {
+        res.status(500).end(ex);
+    }
+});
 
 // Wire up all socket event handlers
 socketHandler(io)

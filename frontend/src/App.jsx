@@ -6,7 +6,7 @@ import MainGameScreen from './pages/MainGameScreen'
 import HomePage from './pages/HomePage'
 import './App.css'
 import Navbar from './components/Navbar'
-import { Route, Routes, Link, BrowserRouter } from "react-router-dom"
+import { Route, Routes, Navigate } from "react-router-dom"
 import ChatSection from './components/ChatSection'
 import CreateGame from './pages/CreateGame'
 
@@ -16,8 +16,9 @@ function App() {
   return (
     <Routes>
       <Route path="/" element={<HomePage />} />
-      <Route path="/game" element={<MainGameScreen />} />
-      <Route path="/createGame" element={<CreateGame />} />
+      <Route path="/game/:roomId" element={<MainGameScreen />} />
+      <Route path="/room/:roomId" element={<CreateGame />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )
 }

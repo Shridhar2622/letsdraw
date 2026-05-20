@@ -5,6 +5,11 @@
   --font-fredoka: "Fredoka", sans-serif;
 }
 
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-20px); }
+}
+
 html {
   font-size: 90%;
 }
