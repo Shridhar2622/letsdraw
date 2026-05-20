@@ -12,8 +12,10 @@ import Tools from '../components/Tools'
 import CanvasBoard from '../components/CanvasBoard'
 import GameOverModal from '../components/GameOverModal'
 
+import { Users } from 'lucide-react'
 
 function MainGameScreen() {
+    const [showMobilePlayers, setShowMobilePlayers] = useState(false);
     const {
         roomId: contextRoomId,
         setRoomId,
@@ -181,10 +183,24 @@ function MainGameScreen() {
             </div>
 
             {/* Main Content  */}
-            <div className="flex flex-col lg:flex-row gap-2 md:gap-4 flex-1 w-full min-h-0 pb-1 lg:pb-0 items-stretch">
-                {/* Sidebar */}
-                <div className="w-full lg:w-72 xl:w-80 shrink-0 flex flex-col min-h-0">
-                    <PlayerList />
+            <div className="flex flex-col lg:flex-row gap-2 md:gap-4 flex-1 w-full min-h-0 pb-1 lg:pb-0 items-stretch relative">
+                
+                {/* Mobile Players Toggle Button */}
+                <button 
+                    onClick={() => setShowMobilePlayers(true)}
+                    className="lg:hidden absolute top-2 left-2 z-40 bg-purple-800 text-white p-2 rounded-full shadow-[2px_3px_0px_#D8B4FE] border-2 border-purple-900 active:translate-y-1 transition-all"
+                >
+                    <Users size={20} />
+                </button>
+
+                {/* Sidebar (Players) */}
+                <div className={`${showMobilePlayers ? 'fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4' : 'hidden lg:flex'} w-full lg:w-72 xl:w-80 shrink-0 flex-col min-h-0`}>
+                    <div className="w-full h-[80vh] lg:h-full relative max-w-sm lg:max-w-none mx-auto flex flex-col">
+                        {showMobilePlayers && (
+                            <button onClick={() => setShowMobilePlayers(false)} className="absolute -top-3 -right-3 z-50 bg-red-500 text-white w-8 h-8 rounded-full border-2 border-white shadow-md font-bold hover:bg-red-600">X</button>
+                        )}
+                        <PlayerList />
+                    </div>
                 </div>
 
                 {/* Canvas Area  */}
@@ -192,12 +208,16 @@ function MainGameScreen() {
                     <CanvasBoard />
                 </div>
 
-                {/* Right Sidebar */}
-                <div className="w-full lg:w-72 xl:w-80 shrink-0 flex flex-col min-h-0">
+                {/* Right Sidebar (Chat) */}
+                <div className="w-full lg:w-72 xl:w-80 shrink-0 flex flex-col min-h-0 h-48 lg:h-auto z-10">
                     <ChatSection />
                 </div>
             </div>
-            <Tools />
+            
+            {/* Tools (Compact on mobile) */}
+            <div className="w-full shrink-0 z-20">
+                <Tools />
+            </div>
         </div>
     )
 }

@@ -47,30 +47,32 @@ function Navbar() {
       </div>
 
       {/* Game Info Panel (Middle Shape - Centered) */}
-      <div className="hidden lg:flex absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 items-center justify-between px-2 xl:px-6 w-[45%] max-w-150 min-w-85 h-14 xl:h-16 bg-[#fefce8] border-4 border-purple-800 -rotate-1 shadow-[4px_5px_0px_#FCD34D] z-10 transition-all">
+      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center justify-between px-2 xl:px-6 w-[55%] sm:w-[50%] lg:w-[45%] max-w-150 h-12 sm:h-14 xl:h-16 bg-[#fefce8] border-2 md:border-4 border-purple-800 -rotate-1 shadow-[2px_3px_0px_#FCD34D] md:shadow-[4px_5px_0px_#FCD34D] z-10 transition-all">
 
         {/* Round Counter */}
         <div className='flex flex-col items-center justify-center shrink-0'>
-          <h1 className='font-patrick text-base xl:text-xl text-purple-800 leading-none mb-1'>ROUND</h1>
-          <h1 className='font-patrick text-lg xl:text-2xl text-purple-500 leading-none'>{currentRound || 1}/{gameSettings.maxRounds || 3}</h1>
+          <h1 className='font-patrick text-[10px] md:text-base xl:text-xl text-purple-800 leading-none mb-0.5 md:mb-1'>RND</h1>
+          <h1 className='font-patrick text-xs md:text-lg xl:text-2xl text-purple-500 leading-none'>{currentRound || 1}/{gameSettings.maxRounds || 3}</h1>
         </div>
 
-        <div className='w-0.5 h-10 xl:h-12 bg-gray-300 rotate-12 shrink-0'></div>
+        <div className='w-0.5 h-8 md:h-10 xl:h-12 bg-gray-300 rotate-12 shrink-0'></div>
 
         {/* Current Word */}
-        <div className='flex flex-col justify-center items-center h-full px-2 xl:px-4 min-w-0'>
-          <div className='font-patrick text-base xl:text-xl text-purple-800 whitespace-nowrap truncate'>The word is</div>
-          <div className='font-patrick text-lg xl:text-2xl font-bold tracking-widest whitespace-nowrap truncate'>{currentDrawer?.socketId === socket?.id ? currentWord : wordHint}</div>
+        <div className='flex flex-col justify-center items-center h-full px-1 md:px-2 xl:px-4 min-w-0 flex-1'>
+          <div className='font-patrick text-[10px] md:text-base xl:text-xl text-purple-800 whitespace-nowrap truncate hidden sm:block'>The word is</div>
+          <div className='font-patrick text-sm sm:text-lg xl:text-2xl font-bold tracking-[0.1em] sm:tracking-widest whitespace-nowrap overflow-hidden text-ellipsis w-full text-center max-w-[80px] sm:max-w-full'>
+             {currentDrawer?.socketId === socket?.id ? currentWord : wordHint}
+          </div>
         </div>
 
-        <div className='w-0.5 h-10 xl:h-12 bg-gray-300 -rotate-12 shrink-0'></div>
+        <div className='w-0.5 h-8 md:h-10 xl:h-12 bg-gray-300 -rotate-12 shrink-0'></div>
 
         {/* Timer */}
-        <div className='flex shrink-0 w-16 xl:w-24 border-2 border-green-600 rounded-full items-center justify-center gap-1 xl:gap-2 h-8 xl:h-10 bg-[#DCFCE7]'>
-          <div ref={timerANIMATION} className="flex items-center justify-center">
-            <Timer className="w-4 h-4 xl:w-5 xl:h-5 shrink-0" color="green" strokeWidth={2.5} />
+        <div className='flex shrink-0 w-10 sm:w-16 xl:w-24 border-2 border-green-600 rounded-full items-center justify-center gap-0.5 sm:gap-1 xl:gap-2 h-6 sm:h-8 xl:h-10 bg-[#DCFCE7]'>
+          <div ref={timerANIMATION} className="items-center justify-center hidden sm:flex">
+            <Timer className="w-3 h-3 sm:w-4 sm:h-4 xl:w-5 xl:h-5 shrink-0" color="green" strokeWidth={2.5} />
           </div>
-          <div className='text-base xl:text-xl font-patrick text-green-600 font-bold'>{timeRemaining}</div>
+          <div className='text-xs sm:text-base xl:text-xl font-patrick text-green-600 font-bold'>{timeRemaining}</div>
         </div>
       </div>
 
