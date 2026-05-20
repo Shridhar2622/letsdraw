@@ -33,6 +33,10 @@ function JoinRoom({ show, set }) {
 
         const handleError = (data) => {
             alert(data.message || "An error occurred");
+            // If they tried to join via URL and it failed, clear the URL so they can try manually
+            if (window.location.search.includes("join=")) {
+                navigate("/", { replace: true });
+            }
         };
 
         socket.on("player_joined", handlePlayerJoined);

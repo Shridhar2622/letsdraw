@@ -244,9 +244,6 @@ export default function socketHandler(io) {
                     
                     clearTimer(room.roomId);
                     room.nextTurn();
-
-                    clearTimer(room.roomId);
-                    room.nextTurn();
                     proceedToNextState(io, room);
                 }
             } else if (room.checkCloseGuess(data.message)) {

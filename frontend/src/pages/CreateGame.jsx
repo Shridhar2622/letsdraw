@@ -53,11 +53,20 @@ export default function CreateGame() {
       setPlayers(data.players);
       setPlayerList(data.players);
       if (data.settings) setSettings(data.settings);
+      
+      // Auto-join game screen if game is already active
+      if (data.gameState === "PLAYING" || data.gameState === "CHOOSING_WORD") {
+        navigate(`/game/${roomId}`);
+      }
     };
 
     const handlePlayerJoined = (data) => {
       setPlayers(data.players);
       setPlayerList(data.players);
+
+      if (data.status === "PLAYING" || data.status === "CHOOSING_WORD") {
+        navigate(`/game/${roomId}`);
+      }
     };
 
     const handlePlayerLeft = (data) => {
