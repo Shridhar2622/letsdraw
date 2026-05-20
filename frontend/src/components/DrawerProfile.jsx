@@ -33,7 +33,6 @@ export default function DrawerProfile({ currentDrawer, name, points, isYou, avat
                     <svg className="absolute -top-3 -left-4 w-8 h-8 text-purple-600" viewBox="0 0 24 24">
                         <path d="M4 12 Q 8 6 12 4 M8 16 Q 14 10 18 8 M12 20 Q 18 14 22 12" fill="transparent" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
                     </svg>
-                    <div className="absolute -bottom-2 -right-2 text-2xl animate-bounce">💗</div>
                 </>
             )}
 
