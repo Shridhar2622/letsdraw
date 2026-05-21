@@ -11,13 +11,16 @@ export default function socketHandler(io) {
         // Increment player count
         activePlayers.inc();
 
+        // Extract the unique player ID from the socket handshake
+        const playerId = socket.handshake.auth?.playerId;
+
         //testing playerJoined
-        console.log("new player joined: ", socket.id)
+        console.log("new player joined: ", socket.id, "playerId:", playerId)
 
 
         // ── Create a new room ─────────────────────────────
         socket.on("create_room", (data) => {
-            const room = createRoom({ socketId: socket.id, name: data.name, avatar: data.avatar });
+            const room = createRoom({ socketId: socket.id, playerId, name: data.name, avatar: data.avatar });
             socket.join(room.roomId);
             socket.emit("room_created", {
                 roomId: room.roomId,
@@ -84,11 +87,63 @@ export default function socketHandler(io) {
                 socket.emit("error", { message: "No room found." });
                 return;
             }
+
+            // ── Ghost Player Prevention ──────────────────
+            // Check if a player with the same playerId (browser session) already exists
+            // This handles mobile reconnections where socket.io gets a new socket ID
+            const existingPlayer = playerId ? room.players.find(p => p.playerId === playerId) : null;
+            if (existingPlayer) {
+                const oldSocketId = existingPlayer.socketId;
+                // Update the existing player's socket ID to the new one
+                existingPlayer.socketId = socket.id;
+                socket.join(room.roomId);
+
+                // Notify everyone with the updated player list
+                io.to(room.roomId).emit("player_joined", {
+                    roomId: room.roomId,
+                    players: room.players,
+                    status: room.status
+                });
+
+                // Send existing draw history to the reconnected player
+                socket.emit("draw_history", room.drawHistory);
+
+                // If game is in progress, resync the reconnected player
+                if (room.status === "PLAYING" || room.status === "CHOOSING_WORD") {
+                    socket.emit("room_info", {
+                        players: room.players,
+                        settings: {
+                            maxRounds: room.maxRounds,
+                            drawTime: room.drawTime,
+                            maxPlayers: room.maxPlayers
+                        },
+                        gameState: room.status,
+                        currentDrawer: room.getCurrentDrawer(),
+                        wordHint: room.getWordHint(),
+                        round: room.round,
+                        timeRemaining: room.timer
+                    });
+
+                    // If this reconnected player IS the drawer, resend word choices/word
+                    const drawer = room.getCurrentDrawer();
+                    if (drawer && drawer.socketId === socket.id) {
+                        if (room.status === "CHOOSING_WORD") {
+                            socket.emit("word_choices", { words: room.wordChoices });
+                        } else if (room.currentWord) {
+                            socket.emit("word_to_draw", { word: room.currentWord });
+                        }
+                    }
+                }
+
+                console.log(`Player "${data.name}" reconnected with new socket ${socket.id} (old: ${oldSocketId})`);
+                return;
+            }
+
             if (room.isFull()) {
                 socket.emit("error", { message: "Room is full." });
                 return;
             }
-            room.addPlayer({ socketId: socket.id, name: data.name, avatar: data.avatar });
+            room.addPlayer({ socketId: socket.id, playerId, name: data.name, avatar: data.avatar });
             socket.join(room.roomId);
 
             // Notify EVERYONE in the room (including the joiner)
@@ -270,7 +325,13 @@ export default function socketHandler(io) {
             const room = getRoomBySocketId(socketId);
             if (!room) return;
 
-            const leftPlayer = room.players.find(p => p.socketId === socketId);
+            // ── Stale Disconnect Guard ───────────────────
+            // If the player already reconnected with a new socket ID,
+            // this old disconnect event should be ignored
+            const player = room.players.find(p => p.socketId === socketId);
+            if (!player) return; // Player already removed or socket ID was replaced
+
+            const leftPlayer = player;
             const { wasDrawer, allGuessed } = room.removePlayer(socketId);
 
             if (room.isEmpty()) {

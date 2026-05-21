@@ -204,7 +204,7 @@ function MainGameScreen() {
                 </div>
 
                 {/* Canvas Area  */}
-                <div className="w-full flex-1 shrink flex flex-col min-h-0 bg-white border-2 border-dashed border-gray-300 rounded-3xl items-center justify-center overflow-hidden relative">
+                <div className="w-full flex-1 shrink flex flex-col min-h-0 items-center justify-center overflow-hidden relative p-2 md:p-4">
                     <CanvasBoard />
                 </div>
 

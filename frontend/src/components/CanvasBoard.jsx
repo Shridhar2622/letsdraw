@@ -133,19 +133,10 @@ export default function CanvasBoard() {
         const canvas = canvasRef.current;
         if (!canvas) return;
 
-        // Make canvas visually fill the container
-        const parent = canvas.parentElement;
-        canvas.style.width = '100%';
-        canvas.style.height = '100%';
-
-        // Only set internal coordinate system ONCE on mount or resize
-        const setCanvasDimensions = () => {
-            canvas.width = parent.clientWidth;
-            canvas.height = parent.clientHeight;
-        };
-
-        // Initial set
-        setCanvasDimensions();
+        // Fix internal resolution to 800x600 (4:3) so everyone shares the EXACT same coordinate space
+        // This permanently fixes the "stretched/different drawings on different devices" bug
+        canvas.width = 800;
+        canvas.height = 600;
 
         const context = canvas.getContext("2d");
         context.lineCap = "round";
@@ -156,22 +147,7 @@ export default function CanvasBoard() {
 
         contextRef.current = context;
 
-        // Handle resize gracefully
-        const resizeListener = () => {
-            // Re-evaluating dimensions clears canvas, so a real app would save/restore ImageData.
-            // For now, simple resize support.
-            const imgData = context.getImageData(0, 0, canvas.width, canvas.height);
-            setCanvasDimensions();
-            // Restore context settings
-            context.lineCap = "round";
-            context.lineJoin = "round";
-            context.fillStyle = "#ffffff";
-            context.fillRect(0, 0, canvas.width, canvas.height);
-            context.putImageData(imgData, 0, 0);
-        };
-
-        window.addEventListener('resize', resizeListener);
-        return () => window.removeEventListener('resize', resizeListener);
+        // No resize listener needed anymore because CSS aspect-ratio handles scaling natively!
     }, []);
 
     // Listen to socket draw events
@@ -516,8 +492,8 @@ export default function CanvasBoard() {
                 onTouchEnd={finishDrawing}
                 onTouchCancel={finishDrawing}
                 onTouchMove={draw}
-                className={`w-full h-full rounded-3xl ${isMyTurn ? (['square','circle','triangle'].includes(activeTool) ? 'cursor-crosshair' : (activeTool === 'eraser' ? 'cursor-cell' : 'cursor-crosshair')) : 'cursor-default pointer-events-none'}`}
-                style={{ touchAction: 'none' }} // Crucial for mobile drawing
+                className={`max-w-full max-h-full bg-white rounded-2xl md:rounded-3xl object-contain shadow-[0px_4px_20px_rgba(0,0,0,0.1)] border-4 border-white ${isMyTurn ? (['square','circle','triangle'].includes(activeTool) ? 'cursor-crosshair' : (activeTool === 'eraser' ? 'cursor-cell' : 'cursor-crosshair')) : 'cursor-default pointer-events-none'}`}
+                style={{ touchAction: 'none', aspectRatio: '4/3' }} // Crucial for responsive coordinate mapping
             />
             {draftShape && isMyTurn && (
                 <ShapeOverlay 

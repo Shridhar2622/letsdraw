@@ -26,6 +26,7 @@ export default class Room {
         if (this.isFull()) return false;
         this.players.push({
             socketId: player.socketId,
+            playerId: player.playerId,
             name: player.name,
             score: 0,
             isDrawer: false,
