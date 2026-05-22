@@ -291,15 +291,16 @@ export default function socketHandler(io) {
                     scores: room.getScoreboard()
                 });
 
+                // Reveal the word exclusively to the person who guessed it
+                socket.emit("word_revealed", { word: room.currentWord });
+
                 if (allGuessed) {
                     io.to(room.roomId).emit("system_message", {
                         text: "Everyone has guessed the word!",
                         type: 'system'
                     });
                     
-                    clearTimer(room.roomId);
-                    room.nextTurn();
-                    proceedToNextState(io, room);
+                    endTurnWithDelay(io, room);
                 }
             } else if (room.checkCloseGuess(data.message)) {
                 // Broadcast standard message but tell solely the sender they are close
@@ -361,32 +362,17 @@ export default function socketHandler(io) {
                 } else if (room.status === "PLAYING" || room.status === "CHOOSING_WORD") {
                     if (wasDrawer) {
                         io.to(room.roomId).emit("system_message", {
-                            text: "The drawer left! Skipping turn...",
+                            text: "The drawer left!",
                             type: 'system'
                         });
-                        
-                        clearTimer(room.roomId);
-                        room.nextTurn(false); 
-                        
-                        if (room.status === "GAME_OVER") {
-                            io.to(room.roomId).emit("game_over", { scoreboard: room.getScoreboard() });
-                        } else {
-                            proceedToNextState(io, room);
-                        }
+                        endTurnWithDelay(io, room);
                     } else if (allGuessed && room.status === "PLAYING") {
                         io.to(room.roomId).emit("system_message", {
                             text: "Everyone has guessed the word!",
                             type: 'system'
                         });
                         
-                        clearTimer(room.roomId);
-                        room.nextTurn();
-                        
-                        if (room.status === "GAME_OVER") {
-                            io.to(room.roomId).emit("game_over", { scoreboard: room.getScoreboard() });
-                        } else {
-                            proceedToNextState(io, room);
-                        }
+                        endTurnWithDelay(io, room);
                     }
                 }
             }
@@ -410,6 +396,40 @@ export default function socketHandler(io) {
     });
 }
 
+// ── Turn Transition Helper ─────────────────────────────
+function endTurnWithDelay(io, room) {
+    if (room.status === "TURN_END_DELAY") return; // Prevent double trigger
+    
+    room.status = "TURN_END_DELAY";
+    clearTimer(room.roomId);
+
+    // Announce the word to everyone
+    io.to(room.roomId).emit("system_message", {
+        text: `Turn over! The word was: ${room.currentWord}`,
+        type: 'system'
+    });
+    io.to(room.roomId).emit("word_revealed", { word: room.currentWord });
+    io.to(room.roomId).emit("turn_ended", { 
+        word: room.currentWord,
+        scoreboard: room.getScoreboard()
+    });
+
+    // Wait 4 seconds so players can see the word, the final drawing, and their scores
+    setTimeout(() => {
+        // Ensure room still exists (e.g. everyone didn't leave)
+        const currentRoom = getRoom(room.roomId);
+        if (currentRoom) {
+            currentRoom.nextTurn();
+            
+            if (currentRoom.status === "GAME_OVER") {
+                io.to(currentRoom.roomId).emit("game_over", { scoreboard: currentRoom.getScoreboard() });
+            } else {
+                proceedToNextState(io, currentRoom);
+            }
+        }
+    }, 4000);
+}
+
 // ── Timer Helper ──────────────────────────────────────
 function startTimer(io, room) {
     clearTimer(room.roomId);
@@ -423,9 +443,7 @@ function startTimer(io, room) {
         });
 
         if (room.timer <= 0) {
-            clearTimer(room.roomId);
-            room.nextTurn();
-            proceedToNextState(io, room);
+            endTurnWithDelay(io, room);
         }
     }, 1000);
 

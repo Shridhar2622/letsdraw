@@ -480,6 +480,40 @@ export default function CanvasBoard() {
         }
     };
 
+    const getDisplayBounds = (bounds) => {
+        const canvas = canvasRef.current;
+        const container = containerRef.current;
+        if (!canvas || !container) return bounds;
+        const rect = canvas.getBoundingClientRect();
+        const containerRect = container.getBoundingClientRect();
+        const scaleX = rect.width / canvas.width;
+        const scaleY = rect.height / canvas.height;
+        return {
+            x: (bounds.x * scaleX) + (rect.left - containerRect.left),
+            y: (bounds.y * scaleY) + (rect.top - containerRect.top),
+            w: bounds.w * scaleX,
+            h: bounds.h * scaleY,
+            rotation: bounds.rotation
+        };
+    };
+
+    const getInternalBounds = (bounds) => {
+        const canvas = canvasRef.current;
+        const container = containerRef.current;
+        if (!canvas || !container) return bounds;
+        const rect = canvas.getBoundingClientRect();
+        const containerRect = container.getBoundingClientRect();
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
+        return {
+            x: (bounds.x - (rect.left - containerRect.left)) * scaleX,
+            y: (bounds.y - (rect.top - containerRect.top)) * scaleY,
+            w: bounds.w * scaleX,
+            h: bounds.h * scaleY,
+            rotation: bounds.rotation
+        };
+    };
+
     return (
         <div ref={containerRef} className="relative w-full h-full flex items-center justify-center">
             <canvas
@@ -497,13 +531,13 @@ export default function CanvasBoard() {
             />
             {draftShape && isMyTurn && (
                 <ShapeOverlay 
-                    initialBounds={draftShape.bounds} 
+                    initialBounds={getDisplayBounds(draftShape.bounds)} 
                     type={draftShape.type} 
                     color={activeColor} 
                     strokeWidth={brushSize} 
                     parentRef={containerRef}
                     isCreating={isDraggingShape}
-                    onCommit={(bounds) => commitShape(draftShape.type, bounds)}
+                    onCommit={(bounds) => commitShape(draftShape.type, getInternalBounds(bounds))}
                     onCancel={() => setDraftShape(null)} 
                 />
             )}

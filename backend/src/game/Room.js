@@ -72,21 +72,32 @@ export default class Room {
     }
 
     selectWords() {
-        // Pick one random word from a specific difficulty list
         const getUnusedWord = (wordList) => {
             const available = wordList.filter(w => !this.usedWords.has(w));
-            // If all words in this difficulty are used, fallback to the full list to prevent crashes
             const pool = available.length > 0 ? available : wordList;
             return pool[Math.floor(Math.random() * pool.length)];
         };
 
-        // Option 1: The "Skill Choice" System -> [Easy, Medium, Hard]
-        this.wordChoices = [
-            getUnusedWord(WORDS_EASY),
-            getUnusedWord(WORDS_MEDIUM),
-            getUnusedWord(WORDS_HARD)
-        ];
+        // Progressive Difficulty System:
+        // Difficulty scales up as the game progresses into later rounds
+        let wordPool;
+        if (this.round <= 2) {
+            wordPool = WORDS_EASY;
+        } else if (this.round <= 4) {
+            wordPool = WORDS_MEDIUM;
+        } else {
+            wordPool = WORDS_HARD;
+        }
+
+        // Get 3 unique words from the appropriate difficulty pool
+        const choices = new Set();
+        let maxAttempts = 10; // Prevent infinite loop in case pool is tiny
+        while (choices.size < 3 && maxAttempts > 0) {
+            choices.add(getUnusedWord(wordPool));
+            maxAttempts--;
+        }
         
+        this.wordChoices = Array.from(choices);
         this.currentWord = null;
     }
 

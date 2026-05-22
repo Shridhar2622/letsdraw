@@ -37,6 +37,7 @@ function MainGameScreen() {
     const roomId = contextRoomId || urlRoomId;
     const [scoreboard, setScoreboard] = useState(null);
     const [wordChoices, setWordChoices] = useState([]);
+    const [revealedWord, setRevealedWord] = useState('');
 
     const handleWordChoice = (word) => {
         if (socket && roomId) {
@@ -128,6 +129,19 @@ function MainGameScreen() {
             }
         });
 
+        // Reveal the word locally when guessed or turn ends
+        socket.on("word_revealed", (data) => {
+            setWordHint(data.word);
+        });
+
+        socket.on("turn_ended", (data) => {
+            setGameState("TURN_ENDED");
+            setRevealedWord(data.word);
+            if (data.scoreboard) {
+                setPlayerList(data.scoreboard);
+            }
+        });
+
         return () => {
             socket.off("room_info", handleRoomInfo);
             socket.off("player_joined", handleRoomInfo);
@@ -139,6 +153,8 @@ function MainGameScreen() {
             socket.off("time_tick");
             socket.off("game_over");
             socket.off("correct_guess");
+            socket.off("word_revealed");
+            socket.off("turn_ended");
             document.removeEventListener('visibilitychange', handleVisibilityChange);
         };
     }, [socket, roomId, setPlayerList, setCurrentDrawer, setWordHint, setCurrentRound, setGameState, setTimeRemaining, setCurrentWord]);
@@ -147,6 +163,19 @@ function MainGameScreen() {
 
             {gameState === 'GAME_OVER' && <GameOverModal scoreboard={scoreboard} />}
             
+            {gameState === 'TURN_ENDED' && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 font-patrick">
+                    <div className="bg-white border-4 border-purple-800 rounded-[30px] shadow-[8px_10px_0px_#D8B4FE] p-8 md:p-12 text-center animate-bounce-in">
+                        <h2 className="text-4xl md:text-6xl font-black text-purple-900 tracking-wider mb-6">
+                            The word was
+                        </h2>
+                        <div className="inline-block px-8 py-4 bg-[#fefce8] border-4 border-purple-800 rounded-2xl text-4xl md:text-5xl font-bold text-purple-900 shadow-[4px_6px_0px_#FCD34D] uppercase tracking-widest">
+                            {revealedWord}
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {gameState === 'CHOOSING_WORD' && currentDrawer && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 font-patrick">
                    <div className="bg-white border-4 border-purple-800 rounded-[30px] shadow-[8px_10px_0px_#D8B4FE] p-8 md:p-12 text-center">
