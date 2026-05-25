@@ -7,9 +7,9 @@ const rooms = new Map();
 
 // ── Room Management ───────────────────────────────
 
-export function createRoom(hostPlayer) {
+export function createRoom(hostPlayer, settings = {}) {
     const roomId = generateRoomId();
-    const room = new Room(roomId, hostPlayer);
+    const room = new Room(roomId, hostPlayer, settings);
     rooms.set(roomId, room);
     activeRooms.inc(); // Increment Prometheus metric
     return room;

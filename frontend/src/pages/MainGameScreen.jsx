@@ -27,9 +27,11 @@ function MainGameScreen() {
         setCurrentRound,
         setGameState,
         setGameSettings,
+        timeRemaining,
         setTimeRemaining,
         setCurrentWord,
-        gameState
+        gameState,
+        playerList
     } = useContext(PlayerContext);
     const socket = useSocket();
     const navigate = useNavigate();
@@ -108,53 +110,61 @@ function MainGameScreen() {
             })));
         }
 
-        socket.on("room_info", handleRoomInfo);
-        socket.on("player_joined", handleRoomInfo);
-        socket.on("player_left", handleRoomInfo);
-
-        socket.on("choosing_word", handleChoosingWord);
-        socket.on("word_choices", (data) => setWordChoices(data.words));
-        socket.on("new_turn", handleNewTurn);
-        socket.on("word_to_draw", (data) => setCurrentWord(data.word));
-        socket.on("time_tick", (data) => setTimeRemaining(data.timeRemaining));
-        socket.on("game_over", (data) => {
+        const handleWordChoices = (data) => setWordChoices(data.words);
+        const handleWordToDraw = (data) => setCurrentWord(data.word);
+        const handleTimeTick = (data) => setTimeRemaining(data.timeRemaining);
+        const handleGameOver = (data) => {
             setGameState("GAME_OVER");
             setScoreboard(data.scoreboard);
-        });
-
-        // Update scores in real-time when someone guesses correctly
-        socket.on("correct_guess", (data) => {
+        };
+        const handleCorrectGuess = (data) => {
             if (data.scores) {
                 setPlayerList(data.scores);
             }
-        });
-
-        // Reveal the word locally when guessed or turn ends
-        socket.on("word_revealed", (data) => {
+        };
+        const handleWordRevealed = (data) => {
             setWordHint(data.word);
-        });
-
-        socket.on("turn_ended", (data) => {
+        };
+        const handleTurnEnded = (data) => {
             setGameState("TURN_ENDED");
             setRevealedWord(data.word);
             if (data.scoreboard) {
                 setPlayerList(data.scoreboard);
             }
-        });
+        };
+        const handleGameRestarted = () => {
+            setGameState("LOBBY");
+            navigate(`/room/${roomId}`);
+        };
+
+        socket.on("room_info", handleRoomInfo);
+        socket.on("player_joined", handleRoomInfo);
+        socket.on("player_left", handleRoomInfo);
+        socket.on("choosing_word", handleChoosingWord);
+        socket.on("word_choices", handleWordChoices);
+        socket.on("new_turn", handleNewTurn);
+        socket.on("word_to_draw", handleWordToDraw);
+        socket.on("time_tick", handleTimeTick);
+        socket.on("game_over", handleGameOver);
+        socket.on("correct_guess", handleCorrectGuess);
+        socket.on("word_revealed", handleWordRevealed);
+        socket.on("turn_ended", handleTurnEnded);
+        socket.on("game_restarted", handleGameRestarted);
 
         return () => {
             socket.off("room_info", handleRoomInfo);
             socket.off("player_joined", handleRoomInfo);
             socket.off("player_left", handleRoomInfo);
-            socket.off("choosing_word");
-            socket.off("word_choices");
-            socket.off("new_turn");
-            socket.off("word_to_draw");
-            socket.off("time_tick");
-            socket.off("game_over");
-            socket.off("correct_guess");
-            socket.off("word_revealed");
-            socket.off("turn_ended");
+            socket.off("choosing_word", handleChoosingWord);
+            socket.off("word_choices", handleWordChoices);
+            socket.off("new_turn", handleNewTurn);
+            socket.off("word_to_draw", handleWordToDraw);
+            socket.off("time_tick", handleTimeTick);
+            socket.off("game_over", handleGameOver);
+            socket.off("correct_guess", handleCorrectGuess);
+            socket.off("word_revealed", handleWordRevealed);
+            socket.off("turn_ended", handleTurnEnded);
+            socket.off("game_restarted", handleGameRestarted);
             document.removeEventListener('visibilitychange', handleVisibilityChange);
         };
     }, [socket, roomId, setPlayerList, setCurrentDrawer, setWordHint, setCurrentRound, setGameState, setTimeRemaining, setCurrentWord]);
@@ -165,12 +175,28 @@ function MainGameScreen() {
             
             {gameState === 'TURN_ENDED' && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 font-patrick">
-                    <div className="bg-white border-4 border-purple-800 rounded-[30px] shadow-[8px_10px_0px_#D8B4FE] p-8 md:p-12 text-center animate-bounce-in">
-                        <h2 className="text-4xl md:text-6xl font-black text-purple-900 tracking-wider mb-6">
+                    <div className="bg-white border-4 border-purple-800 rounded-[30px] shadow-[8px_10px_0px_#D8B4FE] p-8 md:p-12 text-center animate-bounce-in max-w-lg w-full">
+                        <h2 className="text-3xl md:text-5xl font-black text-purple-900 tracking-wider mb-4">
                             The word was
                         </h2>
-                        <div className="inline-block px-8 py-4 bg-[#fefce8] border-4 border-purple-800 rounded-2xl text-4xl md:text-5xl font-bold text-purple-900 shadow-[4px_6px_0px_#FCD34D] uppercase tracking-widest">
+                        <div className="inline-block px-8 py-4 bg-[#fefce8] border-4 border-purple-800 rounded-2xl text-3xl md:text-4xl font-bold text-purple-900 shadow-[4px_6px_0px_#FCD34D] uppercase tracking-widest mb-6">
                             {revealedWord}
+                        </div>
+                        
+                        <div className="border-t-2 border-dashed border-purple-200 pt-6">
+                            <h3 className="text-xl font-bold text-purple-600 mb-4">Current Standings</h3>
+                            <div className="flex flex-col gap-2 max-h-40 overflow-y-auto custom-scrollbar pr-2">
+                                {/* Context playerList is already sorted by score usually, but let's sort just in case */}
+                                {[...playerList].sort((a, b) => b.score - a.score).slice(0, 3).map((p, i) => (
+                                    <div key={p.socketId} className="flex justify-between items-center bg-purple-50 rounded-xl p-3 border-2 border-purple-100">
+                                        <div className="flex items-center gap-3">
+                                            <span className="font-bold text-purple-400 text-lg">#{i + 1}</span>
+                                            <span className="font-bold text-purple-900 text-lg truncate max-w-[120px]">{p.name}</span>
+                                        </div>
+                                        <span className="font-bold text-white bg-purple-500 px-3 py-1 rounded-full">{p.score} pts</span>
+                                    </div>
+                                ))}
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -178,8 +204,11 @@ function MainGameScreen() {
 
             {gameState === 'CHOOSING_WORD' && currentDrawer && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 font-patrick">
-                   <div className="bg-white border-4 border-purple-800 rounded-[30px] shadow-[8px_10px_0px_#D8B4FE] p-8 md:p-12 text-center">
-                      <h2 className="text-4xl md:text-6xl font-black text-purple-900 tracking-wider mb-2">
+                    <div className="bg-white border-4 border-purple-800 rounded-[30px] shadow-[8px_10px_0px_#D8B4FE] p-8 md:p-12 text-center relative">
+                      <div className="absolute top-4 right-6 text-2xl font-bold text-red-500 flex items-center gap-1">
+                          ⏱ {timeRemaining}s
+                      </div>
+                      <h2 className="text-4xl md:text-6xl font-black text-purple-900 tracking-wider mb-2 mt-4">
                           {isMyTurn ? "Your Turn!" : `${currentDrawer.name}'s Turn!`}
                       </h2>
                       <p className="text-xl md:text-2xl text-purple-600 font-bold mb-6">
@@ -198,8 +227,9 @@ function MainGameScreen() {
                           </div>
                       )}
                       {!isMyTurn && (
-                          <div className="flex justify-center mt-4">
-                             <div className="w-8 h-8 border-4 border-purple-800 border-t-transparent rounded-full animate-spin"></div>
+                          <div className="flex flex-col items-center mt-4">
+                             <div className="w-8 h-8 border-4 border-purple-800 border-t-transparent rounded-full animate-spin mb-2"></div>
+                             <p className="text-sm text-purple-400 font-bold">Game will auto-pick if they take too long...</p>
                           </div>
                       )}
                    </div>

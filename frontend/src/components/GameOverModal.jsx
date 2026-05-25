@@ -2,30 +2,20 @@ import React from 'react';
 import { Trophy, Home, Medal, Star } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useSocket } from '../context/SocketContext';
+import { PlayerContext } from '../context/PlayerContext';
 
-import PandaAvatar from '../assets/Profile/PANDA.png';
-import RabbitAvatar from '../assets/Profile/RABBIT.png';
-import BearAvatar from '../assets/Profile/bear.png';
-import FoxAvtar from '../assets/Profile/fox.png';
-import FrogAvtar from '../assets/Profile/frog.png';
-import PenguinAvatar from '../assets/Profile/penguin.png';
-import PuppyAvatar from '../assets/Profile/puppy.png';
-import CatAvatar from '../assets/Profile/cat.png';
-
-const AVATAR_MAP = {
-  panda: PandaAvatar,
-  rabbit: RabbitAvatar,
-  bear: BearAvatar,
-  fox: FoxAvtar,
-  frog: FrogAvtar,
-  penguin: PenguinAvatar,
-  puppy: PuppyAvatar,
-  cat: CatAvatar
-};
+import { AVATAR_MAP } from '../utils/avatars';
 
 export default function GameOverModal({ scoreboard }) {
     const navigate = useNavigate();
     const socket = useSocket();
+    const { roomId } = React.useContext(PlayerContext);
+
+    const handlePlayAgain = () => {
+        if (socket) {
+            socket.emit("restart_game", { roomId });
+        }
+    };
 
     const handleReturnHome = () => {
         if (socket) socket.disconnect();
@@ -43,26 +33,26 @@ export default function GameOverModal({ scoreboard }) {
             <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
                 {/* Left Side */}
                 <div className="absolute top-[15%] left-[5%] md:top-[10%] md:left-[15%] animate-[float_6s_ease-in-out_infinite]">
-                    <img src={PuppyAvatar} alt="Puppy" className="w-24 md:w-40 drop-shadow-xl rotate-[20deg]" />
+                    <img src={AVATAR_MAP.puppy} alt="Puppy" className="w-24 md:w-40 drop-shadow-xl rotate-[20deg]" />
                     <Star className="absolute -top-4 -left-6 text-pink-400 w-6 h-6 fill-current animate-pulse" />
                 </div>
                 <div className="absolute top-[45%] left-[0%] md:top-[40%] md:left-[10%] animate-[float_5s_ease-in-out_infinite_1s]">
-                    <img src={PenguinAvatar} alt="Penguin" className="w-28 md:w-48 drop-shadow-xl rotate-12" />
+                    <img src={AVATAR_MAP.penguin} alt="Penguin" className="w-28 md:w-48 drop-shadow-xl rotate-12" />
                 </div>
                 <div className="absolute bottom-[10%] left-[8%] md:bottom-[15%] md:left-[20%] animate-[float_7s_ease-in-out_infinite]">
-                    <img src={FrogAvtar} alt="Frog" className="w-20 md:w-32 drop-shadow-xl -rotate-6" />
+                    <img src={AVATAR_MAP.frog} alt="Frog" className="w-20 md:w-32 drop-shadow-xl -rotate-6" />
                 </div>
 
                 {/* Right Side */}
                 <div className="absolute top-[10%] right-[5%] md:top-[8%] md:right-[15%] animate-[float_7s_ease-in-out_infinite_reverse]">
-                    <img src={PandaAvatar} alt="Panda" className="w-28 md:w-44 drop-shadow-xl -rotate-[20deg]" />
+                    <img src={AVATAR_MAP.panda} alt="Panda" className="w-28 md:w-44 drop-shadow-xl -rotate-[20deg]" />
                     <div className="absolute -top-6 -right-2 text-pink-400 text-2xl animate-bounce">💖</div>
                 </div>
                 <div className="absolute top-[45%] right-[0%] md:top-[40%] md:right-[10%] animate-[float_5.5s_ease-in-out_infinite_reverse]">
-                    <img src={CatAvatar} alt="Cat" className="w-28 md:w-44 drop-shadow-xl -rotate-12" />
+                    <img src={AVATAR_MAP.cat} alt="Cat" className="w-28 md:w-44 drop-shadow-xl -rotate-12" />
                 </div>
                 <div className="absolute bottom-[5%] right-[5%] md:bottom-[10%] md:right-[15%] animate-[float_6.5s_ease-in-out_infinite_1s]">
-                    <img src={BearAvatar} alt="Bear" className="w-28 md:w-44 drop-shadow-xl rotate-6" />
+                    <img src={AVATAR_MAP.bear} alt="Bear" className="w-28 md:w-44 drop-shadow-xl rotate-6" />
                 </div>
                 
                 {/* Decor */}
@@ -123,12 +113,20 @@ export default function GameOverModal({ scoreboard }) {
                     </div>
                 </div>
 
-                <button
-                    onClick={handleReturnHome}
-                    className="bg-[#EF4444] border-b-4 border-[#B91C1C] text-white text-xl md:text-2xl font-bold rounded-full py-3 px-8 w-full max-w-xs flex items-center justify-center gap-3 hover:-translate-y-1 active:translate-y-1 active:border-b-0 transition-all shadow-sm"
-                >
-                    <Home size={24} /> Return to Home
-                </button>
+                <div className="flex flex-col md:flex-row gap-4 w-full max-w-md justify-center mt-4">
+                    <button
+                        onClick={handlePlayAgain}
+                        className="bg-[#10B981] border-b-4 border-[#047857] text-white text-xl md:text-2xl font-bold rounded-full py-3 px-6 flex-1 flex items-center justify-center gap-2 hover:-translate-y-1 active:translate-y-1 active:border-b-0 transition-all shadow-sm"
+                    >
+                        🎮 Play Again
+                    </button>
+                    <button
+                        onClick={handleReturnHome}
+                        className="bg-[#EF4444] border-b-4 border-[#B91C1C] text-white text-xl md:text-2xl font-bold rounded-full py-3 px-6 flex-1 flex items-center justify-center gap-2 hover:-translate-y-1 active:translate-y-1 active:border-b-0 transition-all shadow-sm"
+                    >
+                        <Home size={24} /> Home
+                    </button>
+                </div>
             </div>
         </div>
     );

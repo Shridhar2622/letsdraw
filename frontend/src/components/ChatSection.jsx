@@ -55,14 +55,24 @@ function ChatSection() {
       setMessages(prev => [...prev, { text: data.message || data.text, type: data.type || "system" }]);
     };
 
+    const handleClearChat = () => {
+      setMessages([]);
+    };
+
     socket.on("chat_message", handleChatMessage);
     socket.on("correct_guess", handleCorrectGuess);
     socket.on("system_message", handleSystemMessage);
+    socket.on("new_turn", handleClearChat);
+    socket.on("choosing_word", handleClearChat);
+    socket.on("game_restarted", handleClearChat);
 
     return () => {
       socket.off("chat_message", handleChatMessage);
       socket.off("correct_guess", handleCorrectGuess);
       socket.off("system_message", handleSystemMessage);
+      socket.off("new_turn", handleClearChat);
+      socket.off("choosing_word", handleClearChat);
+      socket.off("game_restarted", handleClearChat);
     };
   }, [socket]);
 

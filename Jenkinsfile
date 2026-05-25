@@ -1,32 +1,18 @@
-pipeline {
-    agent any
-
-    stages {
-        stage('Checkout') {
-            steps {
-                checkout scm
-            }
-        }
-
+node {
+    try {
         stage('Backend Install') {
-            steps {
-                echo 'Installing backend dependencies'
-            }
+            echo 'Installing backend dependencies'
+            // Add your sh commands here
         }
 
         stage('Frontend Build') {
-            steps {
-                echo 'Building frontend'
-            }
+            echo 'Building frontend'
+            // Add your sh commands here
         }
-    }
 
-    post {
-        success {
-            echo 'Pipeline completed successfully!'
-        }
-        failure {
-            echo 'Pipeline failed. Please check the logs.'
-        }
+        echo 'Pipeline completed successfully!'
+    } catch (e) {
+        echo 'Pipeline failed. Please check the logs.'
+        throw e
     }
 }

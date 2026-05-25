@@ -1,20 +1,31 @@
 import { WORDS_EASY, WORDS_MEDIUM, WORDS_HARD, MAX_PLAYERS, MAX_ROUNDS, ROUND_DURATION, GUESSER_POINTS, DRAWER_POINTS } from "./constants.js";
 
+// Fisher-Yates shuffle — guarantees every word is used before any repeats
+function shuffleArray(arr) {
+    const a = [...arr];
+    for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+}
+
 export default class Room {
-    constructor(roomId, hostPlayer) {
+    constructor(roomId, hostPlayer, settings = {}) {
         this.roomId = roomId;
         this.players = [];           // Array of { socketId, name, score, isDrawer }
         this.status = "LOBBY";       // "LOBBY" | "PLAYING" | "ROUND_END" | "GAME_OVER"
         this.currentWord = null;
         this.currentDrawerIndex = 0;
         this.round = 0;
-        this.maxRounds = MAX_ROUNDS;
-        this.drawTime = ROUND_DURATION;
+        this.maxRounds = settings.rounds || MAX_ROUNDS;
+        this.drawTime = settings.drawTime || ROUND_DURATION;
         this.maxPlayers = MAX_PLAYERS;
-        this.timer = ROUND_DURATION;
+        this.timer = this.drawTime;
+        this.difficulty = settings.difficulty || "mixed"; // "easy" | "medium" | "hard" | "mixed"
         this.drawHistory = [];
         this.redoHistory = [];
-        this.usedWords = new Set();
+        this.wordPool = [];      // Shuffled deck — words drawn from front
         this.wordChoices = [];
         // Auto-add the host as the first player
         this.addPlayer(hostPlayer);
@@ -66,44 +77,53 @@ export default class Room {
         this.currentDrawerIndex = 0;
         this.drawHistory = [];
         this.redoHistory = [];
-        this.usedWords = new Set();
-        this.players[0].isDrawer = true;
+        this.wordPool = []; // Reset so it gets rebuilt
+        this.players.forEach(p => {
+            p.score = 0;
+            p.hasGuessed = false;
+            p.isDrawer = false;
+        });
+        if (this.players.length > 0) {
+            this.players[0].isDrawer = true;
+        }
         this.selectWords();
     }
 
+    _buildWordPool() {
+        // Build the base pool based on room difficulty setting
+        let base;
+        if (this.difficulty === "easy")   base = WORDS_EASY;
+        else if (this.difficulty === "medium") base = WORDS_MEDIUM;
+        else if (this.difficulty === "hard")   base = WORDS_HARD;
+        else {
+            // "mixed" — blend all tiers: 30% easy, 40% medium, 30% hard
+            const e = shuffleArray(WORDS_EASY).slice(0, Math.floor(WORDS_EASY.length * 0.3));
+            const m = shuffleArray(WORDS_MEDIUM).slice(0, Math.floor(WORDS_MEDIUM.length * 0.4));
+            const h = shuffleArray(WORDS_HARD).slice(0, Math.floor(WORDS_HARD.length * 0.3));
+            base = [...e, ...m, ...h];
+        }
+        // Full Fisher-Yates shuffle so every word is equally likely
+        this.wordPool = shuffleArray(base);
+    }
+
     selectWords() {
-        const getUnusedWord = (wordList) => {
-            const available = wordList.filter(w => !this.usedWords.has(w));
-            const pool = available.length > 0 ? available : wordList;
-            return pool[Math.floor(Math.random() * pool.length)];
-        };
-
-        // Progressive Difficulty System:
-        // Difficulty scales up as the game progresses into later rounds
-        let wordPool;
-        if (this.round <= 2) {
-            wordPool = WORDS_EASY;
-        } else if (this.round <= 4) {
-            wordPool = WORDS_MEDIUM;
-        } else {
-            wordPool = WORDS_HARD;
+        // Refill the deck when it runs out — guarantees all words get used before repeats
+        if (this.wordPool.length < 3) {
+            this._buildWordPool();
         }
 
-        // Get 3 unique words from the appropriate difficulty pool
-        const choices = new Set();
-        let maxAttempts = 10; // Prevent infinite loop in case pool is tiny
-        while (choices.size < 3 && maxAttempts > 0) {
-            choices.add(getUnusedWord(wordPool));
-            maxAttempts--;
+        // Draw the next 3 words off the top of the shuffled deck
+        const choices = [];
+        while (choices.length < 3 && this.wordPool.length > 0) {
+            choices.push(this.wordPool.shift());
         }
-        
-        this.wordChoices = Array.from(choices);
+
+        this.wordChoices = choices;
         this.currentWord = null;
     }
 
     setWord(word) {
         this.currentWord = word;
-        this.usedWords.add(word);
         this.status = "PLAYING";
     }
 

@@ -20,7 +20,12 @@ export default function socketHandler(io) {
 
         // ── Create a new room ─────────────────────────────
         socket.on("create_room", (data) => {
-            const room = createRoom({ socketId: socket.id, playerId, name: data.name, avatar: data.avatar });
+            const settings = {
+                difficulty: data.difficulty || "mixed",
+                rounds: data.rounds || undefined,
+                drawTime: data.drawTime || undefined
+            };
+            const room = createRoom({ socketId: socket.id, playerId, name: data.name, avatar: data.avatar }, settings);
             socket.join(room.roomId);
             socket.emit("room_created", {
                 roomId: room.roomId,
@@ -68,13 +73,15 @@ export default function socketHandler(io) {
                 if (data.settings.maxRounds) room.maxRounds = data.settings.maxRounds;
                 if (data.settings.drawTime) room.drawTime = data.settings.drawTime;
                 if (data.settings.maxPlayers) room.maxPlayers = data.settings.maxPlayers;
+                if (data.settings.difficulty) room.difficulty = data.settings.difficulty;
 
                 // Broadcast updated settings to everyone
                 io.to(room.roomId).emit("settings_updated", {
                     settings: {
                         maxRounds: room.maxRounds,
                         drawTime: room.drawTime,
-                        maxPlayers: room.maxPlayers
+                        maxPlayers: room.maxPlayers,
+                        difficulty: room.difficulty
                     }
                 });
             }
@@ -170,6 +177,35 @@ export default function socketHandler(io) {
             room.startGame();
             io.to(room.roomId).emit("game_started");
             proceedToNextState(io, room);
+        });
+
+        // ── Restart game ──────────────────────────────────
+        socket.on("restart_game", (data) => {
+            const room = getRoom(data.roomId);
+            if (!room) return;
+            
+            room.status = "LOBBY";
+            
+            // Notify everyone to go back to lobby
+            io.to(room.roomId).emit("game_restarted");
+            
+            // Wait a moment then broadcast the new state so they land cleanly in lobby
+            setTimeout(() => {
+                io.to(room.roomId).emit("room_info", {
+                    players: room.players,
+                    settings: {
+                        maxRounds: room.maxRounds,
+                        drawTime: room.drawTime,
+                        maxPlayers: room.maxPlayers,
+                        difficulty: room.difficulty
+                    },
+                    gameState: room.status,
+                    currentDrawer: null,
+                    wordHint: "",
+                    round: 0,
+                    timeRemaining: 0
+                });
+            }, 500);
         });
 
         // ── Drawer chooses a word ─────────────────────────
