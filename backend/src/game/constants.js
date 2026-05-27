@@ -16,6 +16,7 @@ export const ROUND_DURATION = 60; // seconds per turn
 // ── Scoring ───────────────────────────────────────
 export const GUESSER_POINTS = 100;
 export const DRAWER_POINTS = 50;
+export const DEFAULT_HINTS = 2;  // Letters revealed per turn (0 = no hints)
 
 // ── Word Bank ─────────────────────────────────────
 // Export each difficulty tier separately for the "Skill Choice" system

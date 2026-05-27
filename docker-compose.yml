@@ -13,7 +13,7 @@ services:
     build:
       context: ./frontend
     ports:
-      - "8080:80"
+      - "3001:80"
     depends_on:
       - backend
 
@@ -37,3 +37,19 @@ services:
     volumes:
       - ./grafana/provisioning:/etc/grafana/provisioning
       - ./grafana/dashboards:/var/lib/grafana/dashboards
+
+  jenkins:
+    build:
+      context: .
+      dockerfile: Dockerfile.jenkins
+    user: root
+    ports:
+      - "8080:8080"
+      - "50000:50000"
+    volumes:
+      - jenkins_home:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock
+      - .:/var/jenkins_home/workspace/letsdraw
+
+volumes:
+  jenkins_home:

@@ -1,4 +1,4 @@
-import { WORDS_EASY, WORDS_MEDIUM, WORDS_HARD, MAX_PLAYERS, MAX_ROUNDS, ROUND_DURATION, GUESSER_POINTS, DRAWER_POINTS } from "./constants.js";
+import { WORDS_EASY, WORDS_MEDIUM, WORDS_HARD, MAX_PLAYERS, MAX_ROUNDS, ROUND_DURATION, GUESSER_POINTS, DRAWER_POINTS, DEFAULT_HINTS } from "./constants.js";
 
 // Fisher-Yates shuffle — guarantees every word is used before any repeats
 function shuffleArray(arr) {
@@ -23,10 +23,12 @@ export default class Room {
         this.maxPlayers = MAX_PLAYERS;
         this.timer = this.drawTime;
         this.difficulty = settings.difficulty || "mixed"; // "easy" | "medium" | "hard" | "mixed"
+        this.hints = settings.hints ?? DEFAULT_HINTS;     // Number of letters to reveal per turn
         this.drawHistory = [];
         this.redoHistory = [];
         this.wordPool = [];      // Shuffled deck — words drawn from front
         this.wordChoices = [];
+        this.revealedIndices = new Set(); // Tracks which letter indices have been progressively revealed
         // Auto-add the host as the first player
         this.addPlayer(hostPlayer);
     }
@@ -78,6 +80,7 @@ export default class Room {
         this.drawHistory = [];
         this.redoHistory = [];
         this.wordPool = []; // Reset so it gets rebuilt
+        this.revealedIndices = new Set();
         this.players.forEach(p => {
             p.score = 0;
             p.hasGuessed = false;
@@ -124,6 +127,7 @@ export default class Room {
 
     setWord(word) {
         this.currentWord = word;
+        this.revealedIndices = new Set(); // Fresh hints for the new word
         this.status = "PLAYING";
     }
 
@@ -156,6 +160,7 @@ export default class Room {
         this.players[this.currentDrawerIndex].isDrawer = true;
         this.drawHistory = [];
         this.redoHistory = [];
+        this.revealedIndices = new Set(); // Reset hints for the new turn
         this.status = "CHOOSING_WORD";
         this.selectWords();
     }
@@ -163,6 +168,8 @@ export default class Room {
     // ── Gameplay ──────────────────────────────────────
 
     checkGuess(socketId, guess) {
+        if (!this.currentWord) return { isCorrect: false, allGuessed: false };
+
         const guesser = this.players.find(p => p.socketId === socketId);
         if (!guesser) return { isCorrect: false, allGuessed: false };
 
@@ -220,12 +227,60 @@ export default class Room {
 
     // ── Display Helpers ───────────────────────────────
 
+    /**
+     * Generates a word hint that:
+     *  - Shows first & last letter of EACH word
+     *  - Shows progressively revealed letters from hints
+     *  - Uses visible gaps between words (non-breaking spaces)
+     *  - Example: "ice skating" → "i _ e    s _ _ _ _ _ g"
+     */
     getWordHint() {
         if (!this.currentWord) return "";
-        return this.currentWord
-            .split("")
-            .map((char, i) => (i === 0 || i === this.currentWord.length - 1) ? char : "_")
-            .join(" ");
+
+        const words = this.currentWord.split(" ");
+        let globalIdx = 0;
+
+        return words.map(word => {
+            const hint = word.split("").map((char) => {
+                const idx = globalIdx;
+                globalIdx++;
+                // Only show letters that have been progressively revealed
+                if (this.revealedIndices.has(idx)) return char;
+                return "_";
+            }).join(" ");
+            globalIdx++; // skip the space between words
+            return hint;
+        }).join("   \u00A0   "); // wide non-breaking space gap between words
+    }
+
+    /**
+     * Reveals one random hidden letter as a hint.
+     * Returns true if a letter was revealed, false if no more letters to reveal.
+     */
+    revealNextHint() {
+        if (!this.currentWord) return false;
+
+        const words = this.currentWord.split(" ");
+        const candidates = [];
+        let globalIdx = 0;
+
+        for (const word of words) {
+            for (let i = 0; i < word.length; i++) {
+                // Any letter not already revealed is a candidate
+                if (!this.revealedIndices.has(globalIdx)) {
+                    candidates.push(globalIdx);
+                }
+                globalIdx++;
+            }
+            globalIdx++; // skip the space
+        }
+
+        if (candidates.length === 0) return false;
+
+        // Pick a random hidden letter to reveal
+        const pick = candidates[Math.floor(Math.random() * candidates.length)];
+        this.revealedIndices.add(pick);
+        return true;
     }
 
     getScoreboard() {

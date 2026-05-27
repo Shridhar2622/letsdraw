@@ -132,6 +132,9 @@ function MainGameScreen() {
                 setPlayerList(data.scoreboard);
             }
         };
+        const handleHintUpdate = (data) => {
+            setWordHint(data.wordHint);
+        };
         const handleGameRestarted = () => {
             setGameState("LOBBY");
             navigate(`/room/${roomId}`);
@@ -150,6 +153,7 @@ function MainGameScreen() {
         socket.on("word_revealed", handleWordRevealed);
         socket.on("turn_ended", handleTurnEnded);
         socket.on("game_restarted", handleGameRestarted);
+        socket.on("hint_update", handleHintUpdate);
 
         return () => {
             socket.off("room_info", handleRoomInfo);
@@ -165,6 +169,7 @@ function MainGameScreen() {
             socket.off("word_revealed", handleWordRevealed);
             socket.off("turn_ended", handleTurnEnded);
             socket.off("game_restarted", handleGameRestarted);
+            socket.off("hint_update", handleHintUpdate);
             document.removeEventListener('visibilitychange', handleVisibilityChange);
         };
     }, [socket, roomId, setPlayerList, setCurrentDrawer, setWordHint, setCurrentRound, setGameState, setTimeRemaining, setCurrentWord]);

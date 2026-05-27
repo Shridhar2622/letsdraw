@@ -29,7 +29,8 @@ export const PlayerProvider = ({ children }) => {
     const [gameSettings, setGameSettings] = useState({
         maxPlayers: 8,
         maxRounds: 3,
-        drawTime: 60
+        drawTime: 60,
+        hints: 2
     });
 
     return (

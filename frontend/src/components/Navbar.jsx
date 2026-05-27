@@ -47,7 +47,7 @@ function Navbar() {
       </div>
 
       {/* Game Info Panel (Middle Shape - Centered) */}
-      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center justify-between px-2 xl:px-6 w-[55%] sm:w-[50%] lg:w-[45%] max-w-150 h-12 sm:h-14 xl:h-16 bg-[#fefce8] border-2 md:border-4 border-purple-800 -rotate-1 shadow-[2px_3px_0px_#FCD34D] md:shadow-[4px_5px_0px_#FCD34D] z-10 transition-all">
+      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center gap-2 sm:gap-4 xl:gap-6 px-3 sm:px-6 xl:px-8 w-auto min-w-[220px] sm:min-w-[300px] max-w-[85%] sm:max-w-[70%] lg:max-w-[55%] h-12 sm:h-14 xl:h-16 bg-[#fefce8] border-2 md:border-4 border-purple-800 -rotate-1 shadow-[2px_3px_0px_#FCD34D] md:shadow-[4px_5px_0px_#FCD34D] z-10 transition-all">
 
         {/* Round Counter */}
         <div className='flex flex-col items-center justify-center shrink-0'>
@@ -58,9 +58,9 @@ function Navbar() {
         <div className='w-0.5 h-8 md:h-10 xl:h-12 bg-gray-300 rotate-12 shrink-0'></div>
 
         {/* Current Word */}
-        <div className='flex flex-col justify-center items-center h-full px-1 md:px-2 xl:px-4 min-w-0 flex-1'>
+        <div className='flex flex-col justify-center items-center h-full min-w-0'>
           <div className='font-patrick text-[10px] md:text-base xl:text-xl text-purple-800 whitespace-nowrap truncate hidden sm:block'>The word is</div>
-          <div className='font-patrick text-sm sm:text-lg xl:text-2xl font-bold tracking-[0.1em] sm:tracking-widest whitespace-nowrap overflow-hidden text-ellipsis w-full text-center max-w-[80px] sm:max-w-full'>
+          <div className='font-patrick text-sm sm:text-lg xl:text-2xl font-bold tracking-widest whitespace-nowrap overflow-hidden text-ellipsis w-full text-center'>
              {currentDrawer?.socketId === socket?.id ? currentWord : wordHint}
           </div>
         </div>

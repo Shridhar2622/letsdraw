@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useContext } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Users, Clock, Hash, Play, Copy, Check, Star, ArrowLeft, Flame } from 'lucide-react';
+import { Users, Clock, Hash, Play, Copy, Check, Star, ArrowLeft, Flame, Lightbulb } from 'lucide-react';
 import { useSocket } from '../context/SocketContext';
 import { PlayerContext } from '../context/PlayerContext';
 
@@ -11,7 +11,7 @@ import { AVATAR_MAP } from '../utils/avatars';
 export default function CreateGame() {
   const navigate = useNavigate();
   const socket = useSocket();
-  const { roomId: contextRoomId, setRoomId, currentWord, setCurrentWord, PlayerName, setPlayerList, gameSettings: settings, setGameSettings: setSettings } = useContext(PlayerContext);
+  const { roomId: contextRoomId, setRoomId, setCurrentWord, PlayerName, setPlayerList, gameSettings: settings, setGameSettings: setSettings } = useContext(PlayerContext);
   const { roomId: urlRoomId } = useParams();
   const roomId = contextRoomId || urlRoomId;
   const [players, setPlayers] = useState([]);
@@ -62,17 +62,17 @@ export default function CreateGame() {
       setSettings(data.settings);
     };
 
-    const handleGameStarted = (data) => {
+    const handleGameStarted = () => {
       navigate(`/game/${roomId}`);
     };
+
+    const handleWordToDraw = (data) => setCurrentWord(data.word);
 
     socket.on("room_info", handleRoomInfo);
     socket.on("player_joined", handlePlayerJoined);
     socket.on("player_left", handlePlayerLeft);
     socket.on("settings_updated", handleSettingsUpdated);
-    socket.on("word_to_draw", (data) => {
-      setCurrentWord(data.word);
-    })
+    socket.on("word_to_draw", handleWordToDraw);
     socket.on("game_started", handleGameStarted);
 
     return () => {
@@ -80,7 +80,7 @@ export default function CreateGame() {
       socket.off("player_joined", handlePlayerJoined);
       socket.off("player_left", handlePlayerLeft);
       socket.off("settings_updated", handleSettingsUpdated);
-      socket.off("word_to_draw")
+      socket.off("word_to_draw", handleWordToDraw);
       socket.off("game_started", handleGameStarted);
     };
   }, [socket, roomId, navigate]);
@@ -265,6 +265,24 @@ export default function CreateGame() {
                   onChange={(e) => handleSettingChange('maxRounds', parseInt(e.target.value, 10))}
                   className="w-full h-3 bg-white border-2 border-purple-300 rounded-lg appearance-none cursor-pointer accent-purple-600 disabled:opacity-50 disabled:cursor-not-allowed hover:accent-purple-500 transition-all"
                 />
+              </div>
+
+              {/* Hints Slider */}
+              <div className="group">
+                <label className="flex items-center justify-between text-purple-900 font-bold mb-3 text-lg md:text-xl">
+                  <span className="flex items-center gap-2"><Lightbulb className="text-purple-600" size={24} /> Hints</span>
+                  <span className="bg-white border-2 border-purple-300 px-4 py-1 rounded-xl shadow-sm">{settings.hints ?? 2}</span>
+                </label>
+                <input
+                  type="range" min="0" max="5"
+                  value={settings.hints ?? 2}
+                  disabled={!isHost}
+                  onChange={(e) => handleSettingChange('hints', parseInt(e.target.value, 10))}
+                  className="w-full h-3 bg-white border-2 border-purple-300 rounded-lg appearance-none cursor-pointer accent-purple-600 disabled:opacity-50 disabled:cursor-not-allowed hover:accent-purple-500 transition-all"
+                />
+                <p className="text-sm text-purple-400 mt-1 font-bold">
+                  {(settings.hints ?? 2) === 0 ? 'No hints — hardcore mode! 🔥' : `${settings.hints ?? 2} letter(s) will reveal over time`}
+                </p>
               </div>
             </div>
 

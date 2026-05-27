@@ -43,7 +43,9 @@ export default function socketHandler(io) {
                     settings: {
                         maxRounds: room.maxRounds,
                         drawTime: room.drawTime,
-                        maxPlayers: room.maxPlayers
+                        maxPlayers: room.maxPlayers,
+                        difficulty: room.difficulty,
+                        hints: room.hints
                     },
                     gameState: room.status,
                     currentDrawer: (room.status === "PLAYING" || room.status === "CHOOSING_WORD") ? room.getCurrentDrawer() : null,
@@ -74,6 +76,7 @@ export default function socketHandler(io) {
                 if (data.settings.drawTime) room.drawTime = data.settings.drawTime;
                 if (data.settings.maxPlayers) room.maxPlayers = data.settings.maxPlayers;
                 if (data.settings.difficulty) room.difficulty = data.settings.difficulty;
+                if (data.settings.hints !== undefined) room.hints = data.settings.hints;
 
                 // Broadcast updated settings to everyone
                 io.to(room.roomId).emit("settings_updated", {
@@ -81,7 +84,8 @@ export default function socketHandler(io) {
                         maxRounds: room.maxRounds,
                         drawTime: room.drawTime,
                         maxPlayers: room.maxPlayers,
-                        difficulty: room.difficulty
+                        difficulty: room.difficulty,
+                        hints: room.hints
                     }
                 });
             }
@@ -122,7 +126,9 @@ export default function socketHandler(io) {
                         settings: {
                             maxRounds: room.maxRounds,
                             drawTime: room.drawTime,
-                            maxPlayers: room.maxPlayers
+                            maxPlayers: room.maxPlayers,
+                            difficulty: room.difficulty,
+                            hints: room.hints
                         },
                         gameState: room.status,
                         currentDrawer: room.getCurrentDrawer(),
@@ -197,7 +203,8 @@ export default function socketHandler(io) {
                         maxRounds: room.maxRounds,
                         drawTime: room.drawTime,
                         maxPlayers: room.maxPlayers,
-                        difficulty: room.difficulty
+                        difficulty: room.difficulty,
+                        hints: room.hints
                     },
                     gameState: room.status,
                     currentDrawer: null,
@@ -222,11 +229,11 @@ export default function socketHandler(io) {
         socket.on("draw", (data) => {
             drawEventsTotal.inc();
             const room = getRoom(data.roomId);
-            if (room) {
+            if (room && room.status === "PLAYING" && room.getCurrentDrawer()?.socketId === socket.id) {
                 room.drawHistory.push({ type: 'draw', ...data });
                 room.redoHistory = [];
+                socket.to(data.roomId).emit("draw_update", data);
             }
-            socket.to(data.roomId).emit("draw_update", data);
         });
 
         // ── Fill canvas ──────────────────────────────────
@@ -243,18 +250,18 @@ export default function socketHandler(io) {
         // ── Draw Shape ───────────────────────────────────
         socket.on("draw_shape", (data) => {
             const room = getRoom(data.roomId);
-            if (room) {
+            if (room && room.status === "PLAYING" && room.getCurrentDrawer()?.socketId === socket.id) {
                 room.drawHistory.push({ type: 'shape', ...data });
                 room.redoHistory = [];
+                socket.to(data.roomId).emit("receive_shape", data);
             }
-            socket.to(data.roomId).emit("receive_shape", data);
         });
 
 
         // ── Clear canvas ──────────────────────────────────
         socket.on("clear_canvas", (data) => {
             const room = getRoom(data.roomId);
-            if (room && room.status === "PLAYING") {
+            if (room && room.status === "PLAYING" && room.getCurrentDrawer()?.socketId === socket.id) {
                 room.drawHistory = [];
                 room.redoHistory = [];
                 io.to(data.roomId).emit("canvas_cleared");
@@ -473,6 +480,24 @@ function startTimer(io, room) {
 
     const interval = setInterval(() => {
         room.timer--;
+
+        // ── Progressive Hint Reveal ──────────────────
+        // Evenly space hint reveals across the draw time
+        if (room.hints > 0 && room.timer > 0) {
+            const hintInterval = Math.floor(room.drawTime / (room.hints + 1));
+            const elapsed = room.drawTime - room.timer;
+            const expectedHints = Math.floor(elapsed / hintInterval);
+            const actualHints = room.revealedIndices.size;
+
+            if (expectedHints > actualHints && actualHints < room.hints) {
+                const revealed = room.revealNextHint();
+                if (revealed) {
+                    io.to(room.roomId).emit("hint_update", {
+                        wordHint: room.getWordHint()
+                    });
+                }
+            }
+        }
 
         io.to(room.roomId).emit("time_tick", {
             timeRemaining: room.timer

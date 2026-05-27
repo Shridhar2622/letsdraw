@@ -3,9 +3,30 @@ import { Pencil, PaintBucket, Trash2, Eraser, Square, Circle, Triangle, Undo2, R
 import { PlayerContext } from '../context/PlayerContext';
 import { useSocket } from '../context/SocketContext';
 
-const COLORS = [
+const BASIC_COLORS = [
     '#000000', '#FFFFFF', '#FF3B30', '#FF9500', '#FFCC00',
     '#4CD964', '#5AC8FA', '#007AFF', '#5856D6', '#FF2D55', '#A2845E'
+];
+
+const COLORS = [
+    // Grayscale
+    ['#FFFFFF', '#D1D5DB', '#9CA3AF', '#4B5563', '#000000'],
+    // Reds
+    ['#FCA5A5', '#F87171', '#EF4444', '#B91C1C', '#7F1D1D'],
+    // Oranges
+    ['#FDBA74', '#FB923C', '#F97316', '#C2410C', '#7C2D12'],
+    // Yellows
+    ['#FEF08A', '#FDE047', '#EAB308', '#A16207', '#713F12'],
+    // Greens
+    ['#86EFAC', '#4ADE80', '#22C55E', '#15803D', '#14532D'],
+    // Blues
+    ['#93C5FD', '#60A5FA', '#3B82F6', '#1D4ED8', '#1E3A8A'],
+    // Purples
+    ['#D8B4FE', '#C084FC', '#A855F7', '#7E22CE', '#581C87'],
+    // Pinks
+    ['#F9A8D4', '#F472B6', '#EC4899', '#BE185D', '#831843'],
+    // Browns
+    ['#E7C697', '#D2A679', '#B8860B', '#8B4513', '#5C4033'],
 ];
 
 function Tools() {
@@ -171,18 +192,23 @@ function Tools() {
                     </button>
 
                     {openMenu === 'color' && (
-                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 p-3 bg-white border-4 border-purple-800 rounded-2xl flex flex-wrap w-[180px] justify-center gap-2 shadow-xl animate-in slide-in-from-bottom-2">
-                            {COLORS.map(color => (
-                                <button
-                                    key={color}
-                                    onClick={() => {
-                                        setActiveColor(color);
-                                        if (activeTool === 'eraser') setActiveTool('pencil');
-                                        setOpenMenu(null);
-                                    }}
-                                    className={`w-8 h-8 rounded-full border-2 transition-all hover:scale-110 ${activeColor === color && activeTool !== 'eraser' ? 'border-purple-800 scale-110 shadow-sm' : 'border-gray-200'}`}
-                                    style={{ backgroundColor: color }}
-                                />
+                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 p-3 bg-white border-4 border-purple-800 rounded-2xl flex flex-col gap-2 shadow-xl animate-in slide-in-from-bottom-2 z-50">
+                            {COLORS.map((row, i) => (
+                                <div key={i} className="flex gap-2">
+                                    {row.map(color => (
+                                        <button
+                                            key={color}
+                                            onClick={() => {
+                                                setActiveColor(color);
+                                                if (activeTool === 'eraser') setActiveTool('pencil');
+                                                setOpenMenu(null);
+                                            }}
+                                            className={`w-6 h-6 md:w-8 md:h-8 rounded-full border-2 transition-all hover:scale-110 ${activeColor === color && activeTool !== 'eraser' ? 'border-purple-800 scale-110 shadow-sm' : 'border-gray-200'}`}
+                                            style={{ backgroundColor: color }}
+                                            title={color}
+                                        />
+                                    ))}
+                                </div>
                             ))}
                         </div>
                     )}
@@ -274,8 +300,8 @@ function Tools() {
                 </div>
 
                 {/* Colors Section */}
-                <div className="flex flex-wrap items-center justify-center gap-2 max-w-none ml-4">
-                    {COLORS.map((color) => (
+                <div className="relative flex flex-wrap items-center justify-center gap-2 max-w-none ml-4">
+                    {BASIC_COLORS.map((color) => (
                         <button
                             key={color}
                             onClick={() => {
@@ -287,6 +313,37 @@ function Tools() {
                             title={color}
                         />
                     ))}
+
+                    {/* More Colors Dropup Button */}
+                    <button 
+                        onClick={() => setOpenMenu(openMenu === 'color-desktop' ? null : 'color-desktop')}
+                        className={`w-10 h-10 rounded-full border-4 flex items-center justify-center transition-all hover:scale-110 ${openMenu === 'color-desktop' ? 'bg-[#fefce8] border-purple-800 scale-110 shadow-[2px_3px_0px_#D8B4FE]' : 'bg-gray-100 border-gray-300 shadow-sm'}`}
+                        title="More Colors"
+                    >
+                        <ChevronUp size={20} className="text-gray-600" strokeWidth={3} />
+                    </button>
+
+                    {openMenu === 'color-desktop' && (
+                        <div className="absolute bottom-full right-0 mb-3 p-4 bg-white border-4 border-purple-800 rounded-[20px] flex flex-col gap-2 shadow-xl animate-in slide-in-from-bottom-2 z-50">
+                            {COLORS.map((row, i) => (
+                                <div key={i} className="flex gap-2">
+                                    {row.map(color => (
+                                        <button
+                                            key={color}
+                                            onClick={() => {
+                                                setActiveColor(color);
+                                                if (activeTool === 'eraser') setActiveTool('pencil');
+                                                setOpenMenu(null);
+                                            }}
+                                            className={`w-8 h-8 rounded-full border-[3px] transition-all hover:scale-110 ${activeColor === color && activeTool !== 'eraser' ? 'border-purple-800 scale-110 shadow-[2px_3px_0px_#D8B4FE]' : 'border-gray-200 hover:border-gray-400'}`}
+                                            style={{ backgroundColor: color }}
+                                            title={color}
+                                        />
+                                    ))}
+                                </div>
+                            ))}
+                        </div>
+                    )}
                 </div>
 
                 {/* Actions Section */}
