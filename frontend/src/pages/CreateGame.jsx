@@ -109,7 +109,7 @@ export default function CreateGame() {
   };
 
   return (
-    <div className="relative min-h-dvh w-full overflow-hidden bg-[#FDF5E6] flex items-center justify-center p-4 md:p-8 ">
+    <div className="relative min-h-dvh w-full overflow-hidden bg-[#FDF5E6] flex items-center justify-center p-4 md:p-8 font-patrick">
 
       {/* --- Background Floating Avatars & Decor --- */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">

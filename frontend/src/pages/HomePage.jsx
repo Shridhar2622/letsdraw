@@ -218,7 +218,7 @@ export default function HomePage() {
                 <div className="flex shrink-0 items-center justify-center gap-2 md:gap-4 mb-1 md:mb-2 mt-4 md:mt-0">
                     <Sparkles className="text-yellow-400 w-6 h-6 md:w-12 md:h-12 animate-pulse" />
                     <h1 className="text-4xl md:text-7xl font-bold text-purple-900 text-center tracking-wider" style={{ textShadow: '3px 3px 0px #FCD34D' }}>
-                        doodle-dash
+                        doodle-dash 
                     </h1>
                     <Sparkles className="text-yellow-400 w-6 h-6 md:w-12 md:h-12 animate-pulse" />
                 </div>
