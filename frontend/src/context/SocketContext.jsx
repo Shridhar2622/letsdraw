@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { io } from 'socket.io-client';
+import { AuthContext } from './AuthContext';
 
 // Generate a unique player ID per browser tab session
 // This survives socket.io reconnects but is unique per tab
@@ -18,20 +19,22 @@ const SocketContext = createContext();
 // 2. Create the Provider
 export const SocketProvider = ({ children }) => {
     const [socket, setSocket] = useState(null);
-    const playerId = getPlayerId();
+    const { user } = useContext(AuthContext);
 
     useEffect(() => {
-        // Initialize the socket connection when the provider mounts
-        // Use environment variable for production, fallback to localhost for dev
+        // Use user.id if logged in, otherwise use the random tab ID
+        const playerId = user?.id || getPlayerId();
+
+        // Initialize the socket connection
         const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
         const newSocket = io(backendUrl, {
-            auth: { playerId }  // Send playerId with every connection
+            auth: { playerId }
         });
         setSocket(newSocket);
 
-        // Cleanup: disconnect the socket when the provider unmounts
+        // Cleanup: disconnect the socket when the provider unmounts or user changes
         return () => newSocket.close();
-    }, []);
+    }, [user?.id]);
 
     // Provide the socket instance to all children
     return (

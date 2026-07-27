@@ -1,6 +1,8 @@
 import { createRoom, getRoom, deleteRoom, getRoomBySocketId } from "../game/gameManager.js";
 import { ROUND_DURATION } from "../game/constants.js";
 import { activePlayers, drawEventsTotal, messagesSentTotal } from "../metrics.js";
+import { GameHistory } from "../db/models/GameHistory.js";
+import { User } from "../db/models/User.js";
 
 // Store timer intervals per room so we can clear them
 const timers = new Map();
@@ -402,6 +404,7 @@ export default function socketHandler(io) {
                     io.to(room.roomId).emit("game_over", {
                         scoreboard: room.getScoreboard()
                     });
+                    saveGameHistory(room);
                 } else if (room.status === "PLAYING" || room.status === "CHOOSING_WORD") {
                     if (wasDrawer) {
                         io.to(room.roomId).emit("system_message", {
@@ -472,16 +475,12 @@ function endTurnWithDelay(io, room) {
                     type: 'system'
                 });
                 io.to(currentRoom.roomId).emit("game_over", { scoreboard: currentRoom.getScoreboard() });
+                saveGameHistory(currentRoom);
                 return;
             }
 
             currentRoom.nextTurn();
-            
-            if (currentRoom.status === "GAME_OVER") {
-                io.to(currentRoom.roomId).emit("game_over", { scoreboard: currentRoom.getScoreboard() });
-            } else {
-                proceedToNextState(io, currentRoom);
-            }
+            proceedToNextState(io, currentRoom);
         }
     }, 4000);
 }
@@ -550,11 +549,58 @@ function clearTimer(roomId) {
     }
 }
 
+async function saveGameHistory(room) {
+    try {
+        const scoreboard = room.getScoreboard();
+        
+        // 1. Save the game history
+        await GameHistory.create({
+            roomId: room.roomId,
+            settings: {
+                maxRounds: room.maxRounds,
+                drawTime: room.drawTime,
+                difficulty: room.difficulty
+            },
+            scoreboard
+        });
+        console.log(`💾 Saved Game History for room ${room.roomId}. Checking stats...`);
+        console.log(`Scoreboard:`, JSON.stringify(scoreboard, null, 2));
+
+        // 2. Update user stats for logged-in players
+        // The winner is the first person in the scoreboard array (assuming length > 0)
+        if (scoreboard.length > 0) {
+            const winnerId = scoreboard[0].playerId;
+            console.log(`Winner ID: ${winnerId}`);
+
+            for (const player of scoreboard) {
+                console.log(`Checking player ${player.playerId}...`);
+                // If playerId is a valid MongoDB ObjectId (24 char hex), they are logged in
+                if (player.playerId.match(/^[0-9a-fA-F]{24}$/)) {
+                    const isWinner = player.playerId === winnerId;
+                    console.log(`Found logged in user! ID: ${player.playerId}, isWinner: ${isWinner}, score: ${player.score}`);
+                    
+                    await User.findByIdAndUpdate(player.playerId, {
+                        $inc: {
+                            totalScore: player.score,
+                            gamesPlayed: 1,
+                            gamesWon: isWinner ? 1 : 0
+                        }
+                    }).catch(() => {}); // Ignore if user not found
+                }
+            }
+        }
+    } catch (err) {
+        console.warn("Failed to save game history or update stats:", err.message);
+    }
+}
+
 function proceedToNextState(io, room) {
     if (room.status === "GAME_OVER") {
         io.to(room.roomId).emit("game_over", {
             scoreboard: room.getScoreboard()
         });
+        
+        saveGameHistory(room);
     } else if (room.status === "CHOOSING_WORD") {
         io.to(room.roomId).emit("canvas_cleared");
         io.to(room.roomId).emit("choosing_word", {

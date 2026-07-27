@@ -4,6 +4,11 @@ import { Sparkles, Star, Pencil, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useSocket } from "../context/SocketContext"
 import JoinRoom from '../components/JoinRoom'
 import { PlayerContext } from '../context/PlayerContext';
+import { AuthContext } from '../context/AuthContext';
+import GameHistorySection from '../components/GameHistorySection';
+import LeaderboardSection from '../components/LeaderboardSection';
+import AuthModal from '../components/AuthModal';
+import { LogOut, User as UserIcon } from 'lucide-react';
 
 // Import Avatars
 import PandaAvatar from '../assets/Profile/PANDA.png';
@@ -91,6 +96,19 @@ export default function HomePage() {
     const [searchParams] = useSearchParams();
     const joinRoomId = searchParams.get('join');
     const [showModel, setShowModel] = useState(false);
+    
+    // Auth logic
+    const { user, logout } = useContext(AuthContext);
+    const [showAuthModal, setShowAuthModal] = useState(false);
+    
+    // History logic
+    const [showHistoryModal, setShowHistoryModal] = useState(false);
+
+    useEffect(() => {
+        if (user) {
+            setPlayerName(user.username);
+        }
+    }, [user]);
 
     useEffect(() => {
         if (!socket) return;
@@ -145,7 +163,39 @@ export default function HomePage() {
     };
 
     return (
-        <div className="relative h-dvh overflow-hidden w-full bg-[#FDF5E6] flex items-center justify-center p-2 md:p-4 font-patrick">
+        <div className="relative min-h-dvh overflow-y-auto w-full bg-[#FDF5E6] flex flex-col items-center justify-start py-4 md:py-8 px-2 md:px-4 font-patrick gap-4">
+            
+            {/* Top Right Auth Button */}
+            <div className="absolute top-4 right-4 z-50 flex items-center gap-4">
+                {user ? (
+                    <div className="flex items-center gap-3 bg-white border-2 border-purple-200 px-4 py-2 rounded-xl shadow-sm">
+                        <UserIcon className="text-purple-400" size={18} />
+                        <span className="font-bold text-purple-900">{user.username}</span>
+                        <button 
+                            onClick={logout}
+                            className="ml-2 text-red-500 hover:text-red-700 transition-colors"
+                            title="Logout"
+                        >
+                            <LogOut size={18} />
+                        </button>
+                    </div>
+                ) : (
+                    <button 
+                        onClick={() => setShowAuthModal(true)}
+                        className="bg-yellow-400 hover:bg-yellow-500 text-yellow-900 border-2 border-yellow-600 px-5 py-2 rounded-xl font-bold shadow-[2px_3px_0px_#CA8A04] transition-all hover:translate-y-[-2px]"
+                    >
+                        Login / Register
+                    </button>
+                )}
+                
+                <button 
+                    onClick={() => setShowHistoryModal(true)}
+                    className="bg-blue-400 hover:bg-blue-500 text-blue-900 border-2 border-blue-600 px-5 py-2 rounded-xl font-bold shadow-[2px_3px_0px_#1E3A8A] transition-all hover:translate-y-[-2px]"
+                >
+                    Match History
+                </button>
+            </div>
+
             {/* --- Background Floating Avatars & Decor --- */}
             <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
                 {/* Top Left: Puppy */}
@@ -199,7 +249,7 @@ export default function HomePage() {
             {/* The Modal Component (should be toggled via state in the future) */}
             <JoinRoom show={showModel} set={setShowModel} />
 
-            <div className="w-[95vw] sm:w-[85vw] md:w-[75vw] lg:w-[65vw] xl:w-[50vw] max-h-[98dvh] bg-white border-4 border-purple-800 rounded-[30px] md:rounded-[40px] shadow-[8px_10px_0px_#D8B4FE] p-4 md:p-6 lg:p-8 flex flex-col items-center relative -rotate-1">
+            <div className="w-[95vw] sm:w-[85vw] md:w-[75vw] lg:w-[65vw] xl:w-[50vw] max-h-[98dvh] bg-white border-4 border-purple-800 rounded-[30px] md:rounded-[40px] shadow-[8px_10px_0px_#D8B4FE] p-4 md:p-6 lg:p-8 flex flex-col items-center relative -rotate-1 z-10">
 
                 {/* Decorative elements */}
                 <Star className="absolute top-8 left-8 text-yellow-300 w-8 h-8 opacity-50 -rotate-12" fill="currentColor" />
@@ -312,6 +362,27 @@ export default function HomePage() {
                 </div>
 
             </div>
+
+            {/* Game History Section below main card */}
+            <LeaderboardSection />
+            
+            {/* History Modal */}
+            {showHistoryModal && (
+                <div className="fixed inset-0 bg-[#FDF5E6]/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+                    <div className="bg-white rounded-3xl border-4 border-blue-800 p-6 md:p-8 w-full max-w-4xl max-h-[90vh] overflow-y-auto shadow-[8px_10px_0px_#93C5FD] relative font-patrick">
+                        <button 
+                            onClick={() => setShowHistoryModal(false)}
+                            className="absolute -top-4 -right-4 bg-red-400 border-4 border-red-700 rounded-full p-2 text-white hover:bg-red-500 hover:-translate-y-1 transition-all shadow-[2px_4px_0px_#B91C1C]"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                        </button>
+                        <GameHistorySection />
+                    </div>
+                </div>
+            )}
+
+            <AuthModal show={showAuthModal} set={setShowAuthModal} />
+
         </div>
     );
 }
