@@ -14,9 +14,10 @@ export const MAX_ROUNDS = 3;
 export const ROUND_DURATION = 60; // seconds per turn
 
 // ── Scoring ───────────────────────────────────────
-export const GUESSER_POINTS = 100;
-export const DRAWER_POINTS = 50;
-export const DEFAULT_HINTS = 2;  // Letters revealed per turn (0 = no hints)
+export const GUESSER_MAX_POINTS = 400; // Base max points for 1st fast guesser
+export const DRAWER_MAX_POINTS = 250;  // Max points drawer can earn per turn
+export const MIN_GUESSER_POINTS = 100;  // Minimum points for any correct guess
+export const DEFAULT_HINTS = 2;        // Letters revealed per turn (0 = no hints)
 
 // ── Word Bank ─────────────────────────────────────
 // Export each difficulty tier separately for the "Skill Choice" system

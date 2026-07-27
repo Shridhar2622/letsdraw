@@ -77,7 +77,8 @@ function Tools() {
         if (!isMyTurn) return;
 
         const handleKeyDown = (e) => {
-            if (e.target.tagName.toLowerCase() === 'input' || e.target.tagName.toLowerCase() === 'textarea') return;
+            const targetTag = e.target.tagName ? e.target.tagName.toLowerCase() : '';
+            if (['input', 'textarea', 'select', 'button'].includes(targetTag) || e.target.isContentEditable) return;
 
             const key = e.key.toLowerCase();
             if (e.ctrlKey || e.metaKey) {

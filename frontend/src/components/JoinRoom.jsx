@@ -25,9 +25,9 @@ function JoinRoom({ show, set }) {
             setRoom(data.roomId);
             // If game is already playing, go directly to the game screen
             if (data.status === "PLAYING") {
-                navigate(`/game/${data.roomId}`);
+                navigate(`/game/${data.roomId}`, { state: { readyToJoin: true } });
             } else {
-                navigate(`/room/${data.roomId}`);
+                navigate(`/room/${data.roomId}`, { state: { readyToJoin: true } });
             }
         };
 

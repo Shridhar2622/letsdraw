@@ -168,6 +168,7 @@ export default function CanvasBoard() {
             ctx.lineWidth = data.thickness;
             ctx.strokeStyle = data.color;
 
+            ctx.beginPath();
             ctx.moveTo(absX0, absY0);
             ctx.lineTo(absX1, absY1);
             ctx.stroke();
@@ -223,6 +224,7 @@ export default function CanvasBoard() {
             const canvas = canvasRef.current;
             const ctx = contextRef.current;
             if (!canvas || !ctx) return;
+            ctx.beginPath();
             ctx.fillStyle = "#ffffff";
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             setDraftShape(null);
@@ -247,6 +249,7 @@ export default function CanvasBoard() {
             if (!canvas || !ctx || !history || !Array.isArray(history)) return;
             
             // Clear canvas before re-drawing history (crucial for Undo/Redo)
+            ctx.beginPath();
             ctx.fillStyle = "#ffffff";
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             

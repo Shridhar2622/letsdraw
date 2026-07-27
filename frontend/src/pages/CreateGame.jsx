@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useContext } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { Users, Clock, Hash, Play, Copy, Check, Star, ArrowLeft, Flame, Lightbulb } from 'lucide-react';
 import { useSocket } from '../context/SocketContext';
 import { PlayerContext } from '../context/PlayerContext';
@@ -10,8 +10,9 @@ import { AVATAR_MAP } from '../utils/avatars';
 
 export default function CreateGame() {
   const navigate = useNavigate();
+  const location = useLocation();
   const socket = useSocket();
-  const { roomId: contextRoomId, setRoomId, setCurrentWord, PlayerName, setPlayerList, gameSettings: settings, setGameSettings: setSettings } = useContext(PlayerContext);
+  const { roomId: contextRoomId, setRoomId, setCurrentWord, PlayerName, PlayerAvtar, setPlayerList, gameSettings: settings, setGameSettings: setSettings } = useContext(PlayerContext);
   const { roomId: urlRoomId } = useParams();
   const roomId = contextRoomId || urlRoomId;
   const [players, setPlayers] = useState([]);
@@ -21,14 +22,22 @@ export default function CreateGame() {
   const isHost = players.length > 0 && players[0].socketId === socket?.id;
 
   useEffect(() => {
-    if (!socket || !PlayerName) {
-      navigate(`/?join=${urlRoomId || roomId || ''}`);
+    if (!socket) return;
+
+    // If the user didn't arrive here via internal navigation (HomePage),
+    // always redirect to the name/avatar picker first.
+    // This prevents a new tab (same browser) from auto-joining with the old localStorage identity.
+    if (!location.state?.readyToJoin) {
+      navigate(`/?join=${urlRoomId || roomId || ''}`, { replace: true });
       return;
     }
 
     if (!contextRoomId && urlRoomId) {
       setRoomId(urlRoomId);
     }
+
+    // Always emit join_room on mount (it handles reconnections & new joins safely)
+    socket.emit("join_room", { roomId, name: PlayerName, avatar: PlayerAvtar });
 
     // Fetch initial room info
     socket.emit("get_room_info", { roomId });
@@ -40,7 +49,7 @@ export default function CreateGame() {
       
       // Auto-join game screen if game is already active
       if (data.gameState === "PLAYING" || data.gameState === "CHOOSING_WORD") {
-        navigate(`/game/${roomId}`);
+        navigate(`/game/${roomId}`, { state: { readyToJoin: true } });
       }
     };
 
@@ -49,7 +58,7 @@ export default function CreateGame() {
       setPlayerList(data.players);
 
       if (data.status === "PLAYING" || data.status === "CHOOSING_WORD") {
-        navigate(`/game/${roomId}`);
+        navigate(`/game/${roomId}`, { state: { readyToJoin: true } });
       }
     };
 
@@ -63,10 +72,15 @@ export default function CreateGame() {
     };
 
     const handleGameStarted = () => {
-      navigate(`/game/${roomId}`);
+      navigate(`/game/${roomId}`, { state: { readyToJoin: true } });
     };
 
     const handleWordToDraw = (data) => setCurrentWord(data.word);
+
+    const handleError = (data) => {
+      alert(data.message || "An error occurred");
+      navigate("/");
+    };
 
     socket.on("room_info", handleRoomInfo);
     socket.on("player_joined", handlePlayerJoined);
@@ -74,6 +88,7 @@ export default function CreateGame() {
     socket.on("settings_updated", handleSettingsUpdated);
     socket.on("word_to_draw", handleWordToDraw);
     socket.on("game_started", handleGameStarted);
+    socket.on("error", handleError);
 
     return () => {
       socket.off("room_info", handleRoomInfo);
@@ -82,6 +97,7 @@ export default function CreateGame() {
       socket.off("settings_updated", handleSettingsUpdated);
       socket.off("word_to_draw", handleWordToDraw);
       socket.off("game_started", handleGameStarted);
+      socket.off("error", handleError);
     };
   }, [socket, roomId, navigate]);
 

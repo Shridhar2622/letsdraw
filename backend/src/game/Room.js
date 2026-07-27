@@ -1,4 +1,4 @@
-import { WORDS_EASY, WORDS_MEDIUM, WORDS_HARD, MAX_PLAYERS, MAX_ROUNDS, ROUND_DURATION, GUESSER_POINTS, DRAWER_POINTS, DEFAULT_HINTS } from "./constants.js";
+import { WORDS_EASY, WORDS_MEDIUM, WORDS_HARD, MAX_PLAYERS, MAX_ROUNDS, ROUND_DURATION, GUESSER_MAX_POINTS, DRAWER_MAX_POINTS, MIN_GUESSER_POINTS, DEFAULT_HINTS } from "./constants.js";
 
 // Fisher-Yates shuffle — guarantees every word is used before any repeats
 function shuffleArray(arr) {
@@ -180,15 +180,29 @@ export default class Room {
         if (guesser.hasGuessed) return { isCorrect: false, allGuessed: false };
 
         if (guess.toLowerCase().trim() === this.currentWord.toLowerCase()) {
+            // Count how many players had ALREADY guessed correctly before this person
+            const previousCorrectCount = this.players.filter(p => !p.isDrawer && p.hasGuessed).length;
+            const guesserOrder = previousCorrectCount + 1; // 1 for 1st guesser, 2 for 2nd, etc.
+
             guesser.hasGuessed = true;
             
-            // Dynamic Scoring based on time left
-            const timeRatio = this.timer / this.drawTime;
-            const points = Math.max(10, Math.floor(GUESSER_POINTS * timeRatio));
+            // ── Skribbl.io Style Guesser Scoring ──────────────
+            // Order penalty: 1st guesser gets highest base, 2nd gets slightly less, etc.
+            const orderBase = Math.max(200, GUESSER_MAX_POINTS - (guesserOrder - 1) * 35);
+            
+            // Time bonus: scaling between 50% (if time runs out) and 100% (if guessed instantly)
+            const timeRatio = Math.max(0, Math.min(1, this.timer / this.drawTime));
+            const points = Math.max(MIN_GUESSER_POINTS, Math.floor(orderBase * (0.5 + 0.5 * timeRatio)));
             guesser.score += points;
 
-            // Drawer gets points for each correct guess based on total players
-            this.players[this.currentDrawerIndex].score += Math.floor(DRAWER_POINTS / Math.max(1, (this.players.length - 1)));
+            // ── Drawer Scoring ───────────────────────────────
+            // Drawer gets points proportional to total guessers in the room for each successful guess
+            const totalGuessers = Math.max(1, this.players.length - 1);
+            const drawerPointsPerGuess = Math.floor(DRAWER_MAX_POINTS / totalGuessers);
+            
+            if (this.players[this.currentDrawerIndex]) {
+                this.players[this.currentDrawerIndex].score += drawerPointsPerGuess;
+            }
 
             // Check if everyone (except drawer) has guessed
             const allGuessed = this.players.every((p, i) => i === this.currentDrawerIndex || p.hasGuessed);
@@ -244,6 +258,8 @@ export default class Room {
             const hint = word.split("").map((char) => {
                 const idx = globalIdx;
                 globalIdx++;
+                // Auto-reveal non-alphanumeric characters (hyphens, apostrophes, etc.)
+                if (!/[a-zA-Z0-9]/.test(char)) return char;
                 // Only show letters that have been progressively revealed
                 if (this.revealedIndices.has(idx)) return char;
                 return "_";
@@ -266,8 +282,9 @@ export default class Room {
 
         for (const word of words) {
             for (let i = 0; i < word.length; i++) {
-                // Any letter not already revealed is a candidate
-                if (!this.revealedIndices.has(globalIdx)) {
+                const char = word[i];
+                // Only alphanumeric characters that haven't been revealed are candidates
+                if (/[a-zA-Z0-9]/.test(char) && !this.revealedIndices.has(globalIdx)) {
                     candidates.push(globalIdx);
                 }
                 globalIdx++;

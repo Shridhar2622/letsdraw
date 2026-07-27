@@ -3,8 +3,21 @@ import { createContext, useState } from "react";
 export const PlayerContext = createContext(null);
 
 export const PlayerProvider = ({ children }) => {
-    const [PlayerAvtar, setPlayerAvtar] = useState(null);
-    const [PlayerName, setPlayerName] = useState(null);
+    const [PlayerAvtar, setPlayerAvtarState] = useState(() => localStorage.getItem('doodle_player_avatar') || null);
+    const [PlayerName, setPlayerNameState] = useState(() => localStorage.getItem('doodle_player_name') || null);
+
+    const setPlayerAvtar = (avatar) => {
+        setPlayerAvtarState(avatar);
+        if (avatar) localStorage.setItem('doodle_player_avatar', avatar);
+        else localStorage.removeItem('doodle_player_avatar');
+    };
+
+    const setPlayerName = (name) => {
+        setPlayerNameState(name);
+        if (name) localStorage.setItem('doodle_player_name', name);
+        else localStorage.removeItem('doodle_player_name');
+    };
+
     const [playerList, setPlayerList] = useState([]); // Add playerList state
     const [roomId, setRoomId] = useState(null);
     const [timeRemaining, setTimeRemaining] = useState(0);

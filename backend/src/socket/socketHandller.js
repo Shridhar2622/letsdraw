@@ -240,7 +240,7 @@ export default function socketHandler(io) {
         socket.on("fill_canvas", (data) => {
             drawEventsTotal.inc();
             const room = getRoom(data.roomId);
-            if (room && room.status === "PLAYING") {
+            if (room && room.status === "PLAYING" && room.getCurrentDrawer()?.socketId === socket.id) {
                 room.drawHistory.push({ type: 'fill', ...data });
                 room.redoHistory = [];
                 io.to(data.roomId).emit("fill_canvas", data);
@@ -271,7 +271,7 @@ export default function socketHandler(io) {
         // ── Undo / Redo ───────────────────────────────────
         socket.on("undo_action", (data) => {
             const room = getRoom(data.roomId);
-            if (room && room.status === "PLAYING" && room.drawHistory.length > 0) {
+            if (room && room.status === "PLAYING" && room.getCurrentDrawer()?.socketId === socket.id && room.drawHistory.length > 0) {
                 const lastAction = room.drawHistory[room.drawHistory.length - 1];
                 const undoneActions = [];
 
@@ -299,7 +299,7 @@ export default function socketHandler(io) {
 
         socket.on("redo_action", (data) => {
             const room = getRoom(data.roomId);
-            if (room && room.status === "PLAYING" && room.redoHistory.length > 0) {
+            if (room && room.status === "PLAYING" && room.getCurrentDrawer()?.socketId === socket.id && room.redoHistory.length > 0) {
                 const actionsToRedo = room.redoHistory.pop();
                 actionsToRedo.forEach(action => {
                     room.drawHistory.push(action);
@@ -390,7 +390,7 @@ export default function socketHandler(io) {
                     type: 'system'
                 });
 
-                if (room.players.length < 2 && (room.status === "PLAYING" || room.status === "CHOOSING_WORD")) {
+                if (room.players.length < 2 && (room.status === "PLAYING" || room.status === "CHOOSING_WORD" || room.status === "TURN_END_DELAY")) {
                     clearTimer(room.roomId);
                     room.status = "LOBBY";
                     room.round = 0;
@@ -462,6 +462,19 @@ function endTurnWithDelay(io, room) {
         // Ensure room still exists (e.g. everyone didn't leave)
         const currentRoom = getRoom(room.roomId);
         if (currentRoom) {
+            // Guard: If players left during delay and remaining players < 2, abort turn advance
+            if (currentRoom.players.length < 2) {
+                currentRoom.status = "LOBBY";
+                currentRoom.round = 0;
+                currentRoom.currentDrawerIndex = 0;
+                io.to(currentRoom.roomId).emit("system_message", {
+                    text: "Not enough players! Game over.",
+                    type: 'system'
+                });
+                io.to(currentRoom.roomId).emit("game_over", { scoreboard: currentRoom.getScoreboard() });
+                return;
+            }
+
             currentRoom.nextTurn();
             
             if (currentRoom.status === "GAME_OVER") {

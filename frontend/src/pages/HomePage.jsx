@@ -103,7 +103,7 @@ export default function HomePage() {
         const handleRoomCreated = (data) => {
             console.log("Room Created:", data.roomId);
             setRoomId(data.roomId);
-            navigate(`/room/${data.roomId}`);
+            navigate(`/room/${data.roomId}`, { state: { readyToJoin: true } });
         };
 
         socket.on("room_created", handleRoomCreated);
@@ -119,13 +119,12 @@ export default function HomePage() {
             return;
         }
 
-        // Emit the event to the backend that a player joined
-        socket.emit('homepage', { name: playerName, avatar: selectedAvatar });
+        // We no longer emit 'homepage', not needed by backend.
         setGlobalName(playerName);
         setGlobalAvatar(selectedAvatar);
 
         if (joinRoomId) {
-            socket.emit('join_room', { roomId: joinRoomId, name: playerName, avatar: selectedAvatar });
+            navigate(`/room/${joinRoomId}`, { state: { readyToJoin: true } });
         } else {
             setShowModel(true)
         }

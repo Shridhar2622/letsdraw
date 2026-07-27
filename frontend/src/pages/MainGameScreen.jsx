@@ -1,6 +1,6 @@
 import { useEffect, useState, useContext } from 'react'
 import { useSocket } from '../context/SocketContext'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useLocation } from 'react-router-dom'
 
 import PlayerList from '../components/PlayerList'
 import { PlayerContext } from '../context/PlayerContext'
@@ -21,6 +21,7 @@ function MainGameScreen() {
         setRoomId,
         setPlayerList,
         PlayerName,
+        PlayerAvtar,
         currentDrawer,
         setCurrentDrawer,
         setWordHint,
@@ -35,6 +36,7 @@ function MainGameScreen() {
     } = useContext(PlayerContext);
     const socket = useSocket();
     const navigate = useNavigate();
+    const location = useLocation();
     const { roomId: urlRoomId } = useParams();
     const roomId = contextRoomId || urlRoomId;
     const [scoreboard, setScoreboard] = useState(null);
@@ -50,8 +52,13 @@ function MainGameScreen() {
     const isMyTurn = currentDrawer?.socketId === socket?.id;
 
     useEffect(() => {
-        if (!socket || !PlayerName) {
-            navigate(`/?join=${urlRoomId || roomId || ''}`);
+        if (!socket) return;
+        
+        // If the user didn't arrive here via internal navigation,
+        // redirect to the name/avatar picker first.
+        // (Note: page refreshes preserve location.state, so refreshes won't be redirected)
+        if (!location.state?.readyToJoin) {
+            navigate(`/?join=${urlRoomId || roomId || ''}`, { replace: true });
             return;
         }
         
@@ -59,6 +66,8 @@ function MainGameScreen() {
             setRoomId(urlRoomId);
         }
 
+        // Re-join the socket.io room on mount (handles page refresh / reconnect)
+        socket.emit("join_room", { roomId, name: PlayerName, avatar: PlayerAvtar });
         socket.emit("get_room_info", { roomId });
 
         const handleVisibilityChange = () => {
@@ -137,7 +146,7 @@ function MainGameScreen() {
         };
         const handleGameRestarted = () => {
             setGameState("LOBBY");
-            navigate(`/room/${roomId}`);
+            navigate(`/room/${roomId}`, { state: { readyToJoin: true } });
         };
 
         socket.on("room_info", handleRoomInfo);
